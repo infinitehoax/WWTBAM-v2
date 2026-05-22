@@ -314,27 +314,41 @@
   function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     const el = document.getElementById('screen-' + id);
-    if (el) el.classList.add('active');
+    if (el) el.classList.add("active");
+  }
+  function lockAnswering() {
+    isLocked = true;
+    ["A", "B", "C", "D"].forEach(l => {
+      const btn = document.getElementById("opt-btn-" + l);
+      if (btn) btn.disabled = true;
+    });
+    document.getElementById("confirm-overlay").classList.remove("show");
   }
 
   function startTimer(seconds) {
     clearInterval(timerInterval);
     timerTotal = seconds;
     let remaining = seconds;
-    const fg = document.getElementById('timer-fg');
-    const num = document.getElementById('timer-num');
+    const fg = document.getElementById("timer-fg");
+    const num = document.getElementById("timer-num");
+
     function tick() {
       num.textContent = Math.ceil(remaining);
-      const offset = circumference * (1 - remaining / timerTotal);
+      const offset = timerTotal > 0 ? circumference * (1 - remaining / timerTotal) : circumference;
       fg.style.strokeDashoffset = offset;
-      fg.style.stroke = remaining <= 5 ? 'var(--wrong)' : remaining <= 10 ? '#FFA500' : 'var(--gold)';
+      fg.style.stroke = remaining <= 5 ? "var(--wrong)" : remaining <= 10 ? "#FFA500" : "var(--gold)";
+
       if (remaining <= 0) {
         clearInterval(timerInterval);
+        lockAnswering();
       }
       remaining = Math.max(0, remaining - 0.1);
     }
+
     tick();
-    timerInterval = setInterval(tick, 100);
+    if (remaining > 0) {
+      timerInterval = setInterval(tick, 100);
+    }
   }
 
   function renderQuestion(q, timeOverride, timerStarted) {
@@ -384,7 +398,7 @@
     `;
 
     if (timerStarted) {
-        const timeToUse = (timeOverride !== undefined && timeOverride > 0) ? timeOverride : q.time_limit;
+        const timeToUse = (timeOverride !== undefined) ? timeOverride : q.time_limit;
         startTimer(timeToUse);
     } else {
         document.getElementById('timer-num').textContent = q.time_limit;
@@ -407,7 +421,7 @@
   }
 
   function selectAnswer(letter) {
-    if (isLocked || isEliminated) return;
+    if (isLocked || isEliminated || (document.getElementById("timer-num") && parseInt(document.getElementById("timer-num").textContent) <= 0)) return;
     pendingAnswer = letter;
     document.getElementById('confirm-overlay').classList.add('show');
   }

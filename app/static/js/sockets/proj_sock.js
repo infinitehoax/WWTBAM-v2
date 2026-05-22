@@ -18,8 +18,14 @@ socket.on('state_snapshot', (data) => {
 // New question
 socket.on('new_question', (data) => {
   if (!window.proj) return;
-  window.proj.renderQuestion(data);
+  window.proj.renderQuestion(data, false, 0);
   window.proj.playSound('suspense');
+});
+
+socket.on('timer_started', (data) => {
+    if (window.proj) {
+        window.proj.startTimer(data.time_limit);
+    }
 });
 
 // Answer revealed

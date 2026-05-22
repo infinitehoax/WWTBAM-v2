@@ -29,11 +29,25 @@ def register_admin_events(socketio):
         # Send to students WITHOUT correct answer
         student_dict = q.to_dict(reveal_answer=False)
         student_dict['time_limit'] = q.time_limit
-        student_dict['prize'] = game_state.prize_ladder[q_index] if q_index < len(game_state.prize_ladder) else '₦0'
+
+        # Format prize from integer ladder
+        prize_int = game_state.prize_ladder[q_index] if q_index < len(game_state.prize_ladder) else 0
+        student_dict['prize'] = game_state.format_naira(prize_int)
+
         student_dict['q_index'] = q_index
         student_dict['eliminated_options'] = []
+        student_dict['timer_started'] = False
 
         socketio.emit('new_question', student_dict)
+
+    @socketio.on('admin_start_timer')
+    def handle_start_timer():
+        """Admin starts the countdown."""
+        success = game_state.start_timer()
+        if success:
+            socketio.emit('timer_started', {
+                'time_limit': game_state.time_limit
+            })
 
     @socketio.on('admin_reveal_answer')
     def handle_reveal_answer(data):
@@ -44,6 +58,8 @@ def register_admin_events(socketio):
         correct = q.get('correct_answer')
         game_state.reveal_answer(correct)
         stats = game_state.get_answer_stats()
+
+        # Leaderboard with formatted scores
         lb = game_state.get_leaderboard()
 
         socketio.emit('answer_revealed', {

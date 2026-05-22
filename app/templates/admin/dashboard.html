@@ -189,6 +189,14 @@
   }
   .answer-bar-label { font-size: 0.75rem; color: rgba(255,255,255,0.6); font-weight: 700; }
   .answer-bar-count { font-size: 0.7rem; color: var(--gold); }
+
+  /* Toggle switch */
+  .switch { position: relative; display: inline-block; width: 40px; height: 22px; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .slider { position: absolute; cursor: pointer; inset: 0; background-color: #333; transition: .4s; border-radius: 22px; }
+  .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+  input:checked + .slider { background-color: var(--gold); }
+  input:checked + .slider:before { transform: translateX(18px); }
 </style>
 {% endblock %}
 {% block body %}
@@ -215,8 +223,10 @@
 
     <div class="section-title">Game Controls</div>
     <div class="action-row" style="margin-bottom:10px;">
-      <button class="btn btn-gold" onclick="revealAnswer()" id="btn-reveal">Reveal Answer</button>
+      <button class="btn btn-gold" onclick="startTimer()" id="btn-start-timer" disabled>Start Timer</button>
+      <button class="btn btn-gold" onclick="revealAnswer()" id="btn-reveal" disabled>Reveal Answer</button>
       <button class="btn btn-ghost" onclick="showLeaderboard()">Leaderboard</button>
+      <button class="btn btn-ghost" onclick="nextQuestion()" id="btn-next-q">Next Question ⏭</button>
     </div>
     <button class="btn btn-danger" onclick="if(confirm('Reset game?')) resetGame()" style="width:100%;margin-bottom:4px;">⚠ Reset Game</button>
 
@@ -249,7 +259,7 @@
       {% for p in prize_ladder|reverse %}
       <div class="prize-row {% if loop.revindex0 in [4,9] %}safe{% endif %}" data-idx="{{ loop.revindex - 1 }}">
         <span class="prize-n">Q{{ loop.revindex }}</span>
-        <span>{{ p }}</span>
+        <span>₦{{ "{:,}".format(p) }}</span>
       </div>
       {% endfor %}
     </div>
@@ -270,7 +280,17 @@
 
       <!-- Live Players / Spy View -->
       <div class="panel">
-        <div class="panel-header"><span class="dot"></span>Players & Answers <span id="answer-count" style="margin-left:auto;color:var(--gold);font-size:0.9rem;"></span></div>
+        <div class="panel-header">
+          <span class="dot"></span>Players & Answers
+          <span id="answer-count" style="margin-left:10px;color:var(--gold);font-size:0.8rem;"></span>
+          <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+            <span style="font-size:0.7rem; color:rgba(255,255,255,0.4);">SPY VIEW</span>
+            <label class="switch">
+              <input type="checkbox" id="spy-toggle" checked onchange="toggleSpyView()">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
         <div class="player-list" id="player-list">
           <div style="color:rgba(255,255,255,0.3);font-style:italic;font-size:0.85rem;">Waiting for players...</div>
         </div>
@@ -341,6 +361,7 @@
   let selectedQId = null, selectedQIdx = 0;
   let players = {}, answers = {}, currentQ = null;
   let timerInterval = null, timerEnd = null;
+  let spyViewEnabled = true;
 
   // Select question (highlight)
   function selectQuestion(id, idx) {
@@ -355,6 +376,32 @@
     selectQuestion(id, idx);
     socket.emit('admin_push_question', {question_id: id, index: idx});
     toast('Question pushed!');
+    document.getElementById('btn-start-timer').disabled = false;
+    document.getElementById('btn-reveal').disabled = true;
+  }
+
+  function startTimer() {
+    socket.emit('admin_start_timer');
+    document.getElementById('btn-start-timer').disabled = true;
+    document.getElementById('btn-reveal').disabled = false;
+    toast('Timer started!');
+  }
+
+  function nextQuestion() {
+    let nextIdx = (currentQ ? currentQ.q_index + 1 : 0);
+    const items = document.querySelectorAll('.q-item');
+    if (nextIdx < items.length) {
+      const nextItem = items[nextIdx];
+      const id = parseInt(nextItem.id.replace('qi-', ''));
+      pushQuestion(id, nextIdx);
+    } else {
+      toast('No more questions!', true);
+    }
+  }
+
+  function toggleSpyView() {
+    spyViewEnabled = document.getElementById('spy-toggle').checked;
+    renderPlayers();
   }
 
   function revealAnswer() {
@@ -418,7 +465,7 @@
   }
 
   // Timer
-  function startTimer(seconds) {
+  function startTimerUI(seconds) {
     clearInterval(timerInterval);
     timerEnd = Date.now() + seconds * 1000;
     timerInterval = setInterval(() => {
@@ -464,13 +511,21 @@
     }
     list.innerHTML = playerArr.map(p => {
       const ans = answers[p.sid];
-      const ansHtml = ans
-        ? `<span class="player-ans ans-${ans.answer}">${ans.answer} (${ans.time.toFixed(1)}s)</span>`
-        : `<span class="no-ans">thinking...</span>`;
+      let ansHtml = '';
+      if (ans) {
+          if (spyViewEnabled || document.getElementById('phase-badge').textContent === 'REVEAL') {
+              ansHtml = `<span class="player-ans ans-${ans.answer}">${ans.answer} (${ans.time.toFixed(1)}s)</span>`;
+          } else {
+              ansHtml = `<span class="player-ans" style="background:#444; color:#fff;">LOCKED</span>`;
+          }
+      } else {
+          ansHtml = p.is_eliminated ? `<span class="no-ans" style="color:#F87171;">eliminated</span>` : `<span class="no-ans">thinking...</span>`;
+      }
+
       return `<div class="player-row">
         <span class="player-name">${p.name}</span>
         ${ansHtml}
-        <span class="player-score">${p.score || 0}</span>
+        <span class="player-score">${p.score_formatted || '₦0'}</span>
       </div>`;
     }).join('');
     document.getElementById('players-badge').textContent = playerArr.length + ' Players';
@@ -491,7 +546,7 @@
       <div class="player-row">
         <span style="color:rgba(255,215,0,0.5);font-size:0.75rem;width:18px;">${i+1}</span>
         <span class="player-name">${p.name}</span>
-        <span class="player-score">${p.score}</span>
+        <span class="player-score">${p.score_formatted || '₦0'}</span>
       </div>`).join('');
   }
 
@@ -515,21 +570,12 @@
 
   // Socket event handlers (called from admin_sock.js)
   window.onPlayerJoined = function(data) {
-    // Remove old sid entry for same player if reconnecting
-    for (const sid in players) {
-      if (players[sid].name === data.name && sid !== data.sid) {
-        delete players[sid];
-        delete answers[sid];
-        break;
-      }
-    }
     players[data.sid] = {
       sid: data.sid,
       name: data.name,
       score: data.score || 0,
       active: true
     };
-    // Restore their answer if they had one before reconnecting
     if (data.answer) {
       answers[data.sid] = { answer: data.answer, time: data.answer_time || 0 };
     }
@@ -544,7 +590,6 @@
     answers[data.sid] = {answer: data.answer, time: data.time};
     if (players[data.sid]) players[data.sid].name = data.name;
     renderPlayers();
-    // count totals
     const stats = {A:0,B:0,C:0,D:0};
     Object.values(answers).forEach(a => { if (stats[a.answer] !== undefined) stats[a.answer]++; });
     updateAnswerBars(stats);
@@ -554,17 +599,19 @@
     updateAnswerBars({A:0,B:0,C:0,D:0});
     document.getElementById('answer-bars').style.display = 'none';
     renderQuestionPreview(data);
-    startTimer(data.time_limit || 30);
+    clearInterval(timerInterval);
+    document.getElementById('admin-timer').textContent = data.time_limit || 30;
     updatePrizeLadder(data.q_index || 0);
     document.getElementById('phase-badge').textContent = 'QUESTION';
+  };
+  window.onTimerStarted = function(data) {
+    startTimerUI(data.time_limit);
   };
   window.onAnswerRevealed = function(data) {
     updateAnswerBars(data.answer_stats);
     if (data.leaderboard) {
       data.leaderboard.forEach(p => {
-        if (players[p.sid]) {
-          players[p.sid].score = p.score;
-        }
+        players[p.sid] = p;
       });
     }
     renderPlayers();
@@ -578,8 +625,15 @@
     }
     if (data.current_question) renderQuestionPreview(data.current_question);
     if (data.current_q_index >= 0) updatePrizeLadder(data.current_q_index);
-    if (data.phase === 'question' && data.time_remaining > 0) {
-      startTimer(data.time_remaining);
+    if (data.phase === 'question') {
+      if (data.timer_started && data.time_remaining > 0) {
+        startTimerUI(data.time_remaining);
+        document.getElementById('btn-start-timer').disabled = true;
+        document.getElementById('btn-reveal').disabled = false;
+      } else if (!data.timer_started) {
+        document.getElementById('btn-start-timer').disabled = false;
+        document.getElementById('btn-reveal').disabled = true;
+      }
     }
     document.getElementById('phase-badge').textContent = (data.phase || 'lobby').toUpperCase();
     document.getElementById('players-badge').textContent = (data.players ? data.players.filter(p=>p.active).length : 0) + ' Players';

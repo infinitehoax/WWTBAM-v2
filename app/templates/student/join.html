@@ -47,10 +47,15 @@
     <div class="show-sub">Crystal Brooks College Edition</div>
   </div>
   <div class="join-card">
-    <div class="join-card-title">Enter Your Name to Play</div>
+    <div class="join-card-title">Join the Game</div>
+    <div class="input-wrap">
+      <label>Room Code</label>
+      <input type="text" id="room-code" placeholder="6-digit code" maxlength="10" autofocus
+        onkeydown="if(event.key==='Enter') document.getElementById('player-name').focus()">
+    </div>
     <div class="input-wrap">
       <label>Your Name</label>
-      <input type="text" id="player-name" placeholder="e.g. Chidi Okafor" maxlength="50" autofocus
+      <input type="text" id="player-name" placeholder="e.g. Chidi Okafor" maxlength="50"
         onkeydown="if(event.key==='Enter') joinGame()">
     </div>
     <div id="join-error" style="color:#FCA5A5;font-size:0.82rem;margin-bottom:12px;display:none;"></div>
@@ -62,13 +67,22 @@
 {% block scripts %}
 <script>
   function joinGame() {
+    const code = document.getElementById('room-code').value.trim().toUpperCase();
     const name = document.getElementById('player-name').value.trim();
+    const err = document.getElementById('join-error');
+
+    if (!code) {
+      err.textContent = 'Please enter the room code!';
+      err.style.display = 'block';
+      return;
+    }
     if (!name) {
-      const err = document.getElementById('join-error');
       err.textContent = 'Please enter your name!';
       err.style.display = 'block';
       return;
     }
+
+    sessionStorage.setItem('roomCode', code);
     sessionStorage.setItem('playerName', name);
     window.location.href = '/play/podium';
   }

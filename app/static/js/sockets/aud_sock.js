@@ -12,6 +12,9 @@ socket.on('audience_init', (data) => {
     if (data.votes) {
       window.audienceUI.updateBars(data.votes);
     }
+    if (data.is_friend && data.question) {
+        window.audienceUI.showFriendCall(data.question, 'The contestant');
+    }
   }
 });
 
@@ -27,20 +30,29 @@ socket.on('audience_votes_update', (data) => {
   }
 });
 
+socket.on('you_are_the_friend', (data) => {
+    if (window.audienceUI) {
+        window.audienceUI.showFriendCall(data.question, data.student_name);
+    }
+});
+
 socket.on('new_question', (data) => {
   if (window.audienceUI) {
     window.audienceUI.showPoll(false);
+    window.audienceUI.hideFriendCall();
   }
 });
 
 socket.on('answer_revealed', () => {
     if (window.audienceUI) {
         window.audienceUI.showPoll(false);
+        window.audienceUI.hideFriendCall();
     }
 });
 
 socket.on('game_reset', () => {
     if (window.audienceUI) {
         window.audienceUI.showPoll(false);
+        window.audienceUI.hideFriendCall();
     }
 });

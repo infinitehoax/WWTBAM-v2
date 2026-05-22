@@ -411,23 +411,29 @@ function updatePrizeLadder(idx) {
 let timerInterval = null;
 const TC_CIRC = 195.0;
 function startTimer(seconds) {
+function startTimer(seconds) {
   clearInterval(timerInterval);
   let rem = seconds;
-  const fg = document.getElementById('proj-tc-fg');
-  const num = document.getElementById('proj-timer-num');
+  const fg = document.getElementById("proj-tc-fg");
+  const num = document.getElementById("proj-timer-num");
+
   function tick() {
     num.textContent = Math.ceil(rem);
-    const offset = TC_CIRC * (1 - rem / seconds);
+    const offset = seconds > 0 ? TC_CIRC * (1 - rem / seconds) : TC_CIRC;
     fg.style.strokeDashoffset = offset;
-    fg.style.stroke = rem <= 5 ? 'var(--wrong)' : rem <= 10 ? '#FFA500' : 'var(--gold)';
-    if (rem <= 0) clearInterval(timerInterval);
+    fg.style.stroke = rem <= 5 ? "var(--wrong)" : rem <= 10 ? "#FFA500" : "var(--gold)";
+
+    if (rem <= 0) {
+      clearInterval(timerInterval);
+    }
     rem = Math.max(0, rem - 0.1);
   }
-  tick();
-  timerInterval = setInterval(tick, 100);
-}
 
-// ── Render question ───────────────────────────────────────
+  tick();
+  if (rem > 0) {
+    timerInterval = setInterval(tick, 100);
+  }
+}
 function renderQuestion(q, timerStarted, timeOverride) {
   document.getElementById('results-overlay').classList.remove('show');
   showPhase('question');
@@ -464,7 +470,7 @@ function renderQuestion(q, timerStarted, timeOverride) {
   }).join('');
 
   if (timerStarted) {
-      const timeToUse = (timeOverride !== undefined && timeOverride > 0) ? timeOverride : q.time_limit;
+      const timeToUse = (timeOverride !== undefined) ? timeOverride : q.time_limit;
       startTimer(timeToUse);
   } else {
       document.getElementById('proj-timer-num').textContent = q.time_limit;

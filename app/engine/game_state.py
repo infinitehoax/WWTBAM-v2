@@ -173,6 +173,7 @@ class GameState:
     def reveal_answer(self, correct_answer):
         with self._lock:
             self.phase = 'reveal'
+            self.audience_poll_active = False
             # Reset last results for all players
             for p in self.players.values():
                 p["last_answer"] = None

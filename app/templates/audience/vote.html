@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+
+{% block title %}Audience Vote{% endblock %}
+
+{% block extra_head %}
+<style>
+  .audience-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    text-align: center;
+  }
+  .poll-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    border-radius: 20px;
+    padding: 30px;
+    margin-top: 20px;
+    backdrop-filter: blur(10px);
+  }
+  .q-text {
+    font-size: 1.2rem;
+    margin-bottom: 25px;
+    color: var(--white);
+    font-weight: 600;
+  }
+  .vote-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-bottom: 30px;
+  }
+  .vote-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    border-radius: 12px;
+    padding: 20px;
+    color: var(--white);
+    font-size: 1.2rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .vote-btn:hover:not(:disabled) {
+    background: rgba(255, 215, 0, 0.15);
+    border-color: var(--gold);
+    transform: translateY(-2px);
+  }
+  .vote-btn.voted {
+    background: var(--gold);
+    color: var(--deep-blue);
+    border-color: var(--gold);
+  }
+  .vote-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .poll-results {
+    margin-top: 30px;
+    text-align: left;
+  }
+  .poll-bar-row {
+    margin-bottom: 12px;
+  }
+  .poll-bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+    color: rgba(255, 255, 255, 0.7);
+  }
+  .poll-bar-outer {
+    height: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+    overflow: hidden;
+  }
+  .poll-bar-inner {
+    height: 100%;
+    background: var(--gold);
+    width: 0%;
+    transition: width 0.5s ease;
+  }
+  .waiting-msg {
+    color: rgba(255, 255, 255, 0.5);
+    font-style: italic;
+    padding: 40px 0;
+  }
+</style>
+{% endblock %}
+
+{% block body %}
+<div class="audience-container">
+  <h1 class="font-display gold-text glow" style="font-size: 2rem; margin-bottom: 10px;">AUDIENCE POLL</h1>
+  <p style="color: rgba(255,255,255,0.6); margin-bottom: 30px;">Help the contestant choose the right answer!</p>
+
+  <div id="poll-active" style="display: none;">
+    <div class="poll-card">
+      <div id="question-text" class="q-text">Loading question...</div>
+      <div class="vote-grid" id="vote-grid">
+        <button class="vote-btn" onclick="submitVote('A')">A</button>
+        <button class="vote-btn" onclick="submitVote('B')">B</button>
+        <button class="vote-btn" onclick="submitVote('C')">C</button>
+        <button class="vote-btn" onclick="submitVote('D')">D</button>
+      </div>
+
+      <div class="poll-results">
+        <div id="poll-bars">
+          <!-- Bars injected here -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="poll-inactive" class="waiting-msg">
+    <div style="font-size: 3rem; margin-bottom: 20px;">⌛</div>
+    Waiting for the contestant to use the "Ask the Audience" lifeline...
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/sockets/aud_sock.js"></script>
+<script>
+  let votedOption = null;
+
+  function submitVote(option) {
+    if (votedOption) return;
+    votedOption = option;
+
+    // UI update
+    document.querySelectorAll('.vote-btn').forEach(btn => {
+      btn.disabled = true;
+      if (btn.textContent === option) btn.classList.add('voted');
+    });
+
+    socket.emit('audience_vote', { option });
+  }
+
+  function updateBars(votes) {
+    const total = Object.values(votes).reduce((a, b) => a + b, 0);
+    const barsContainer = document.getElementById('poll-bars');
+    barsContainer.innerHTML = ['A', 'B', 'C', 'D'].map(l => {
+      const count = votes[l] || 0;
+      const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+      return `
+        <div class="poll-bar-row">
+          <div class="poll-bar-label">
+            <span>Option ${l}</span>
+            <span>${pct}%</span>
+          </div>
+          <div class="poll-bar-outer">
+            <div class="poll-bar-inner" style="width: ${pct}%"></div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function showPoll(active, question) {
+    document.getElementById('poll-active').style.display = active ? 'block' : 'none';
+    document.getElementById('poll-inactive').style.display = active ? 'none' : 'block';
+
+    if (active && question) {
+      document.getElementById('question-text').textContent = question.question_text;
+    }
+
+    if (!active) {
+      votedOption = null;
+      document.querySelectorAll('.vote-btn').forEach(btn => {
+        btn.disabled = false;
+        btn.classList.remove('voted');
+      });
+    }
+  }
+
+  // Socket handlers
+  window.audienceUI = {
+    updateBars,
+    showPoll
+  };
+</script>
+{% endblock %}

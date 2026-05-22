@@ -20,6 +20,8 @@ def create_app():
     app.register_blueprint(student_bp)
     app.register_blueprint(projector_bp)
     app.register_blueprint(api_bp)
+    from .blueprints.audience.routes import audience_bp
+    app.register_blueprint(audience_bp)
 
     # Register socket events
     from .sockets import register_all_events

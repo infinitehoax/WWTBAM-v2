@@ -31,7 +31,7 @@ socket.on('timer_started', (data) => {
 // Answer revealed
 socket.on('answer_revealed', (data) => {
   if (!window.proj) return;
-  window.proj.revealAnswer(data.correct_answer, data.answer_stats);
+  window.proj.revealAnswer(data.correct_answer, data.answer_stats, data.leaderboard);
   window.proj.playSound('correct');
   if (data.leaderboard) {
     // Update footer player count

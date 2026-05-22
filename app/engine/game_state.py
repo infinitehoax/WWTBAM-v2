@@ -173,6 +173,11 @@ class GameState:
     def reveal_answer(self, correct_answer):
         with self._lock:
             self.phase = 'reveal'
+            # Reset last results for all players
+            for p in self.players.values():
+                p["last_answer"] = None
+                p["is_correct_last"] = False
+
             # Update scores for players who were not already eliminated
             for sid, p in self.players.items():
                 if not p.get('active') or p.get('is_eliminated'):
@@ -181,19 +186,23 @@ class GameState:
                 # Check if they answered this question
                 ans_data = self.answers.get(sid)
                 if ans_data:
+                    p['last_answer'] = ans_data['answer']
                     p['answered'] += 1
                     if ans_data['answer'] == correct_answer:
                         # Correct: set score to current prize level
                         p['score'] = self.prize_ladder[self.current_q_index]
                         p['correct'] += 1
+                        p['is_correct_last'] = True
                     else:
                         # Wrong: Eliminated! Drop to safe haven
                         p['is_eliminated'] = True
                         p['score'] = self._get_safe_haven_value(self.current_q_index)
+                        p['is_correct_last'] = False
                 else:
                     # Didn't answer: In WWTBAM this is like getting it wrong if the timer is up
                     p['is_eliminated'] = True
                     p['score'] = self._get_safe_haven_value(self.current_q_index)
+                    p['is_correct_last'] = False
 
     def _get_safe_haven_value(self, q_index):
         if q_index < 4:

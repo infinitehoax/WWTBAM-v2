@@ -140,15 +140,25 @@ class GameState:
 
     def reveal_answer(self, correct_answer):
         with self._lock:
-            self.phase = 'reveal'
-            # Update scores
+            self.phase = "reveal"
+            # Reset last results for all players
+            for p in self.players.values():
+                p["last_answer"] = None
+                p["is_correct_last"] = False
+
+            # Update scores and record results
             for sid, data in self.answers.items():
                 if sid in self.players:
-                    self.players[sid]['answered'] += 1
-                    if data['answer'] == correct_answer:
+                    ans = data["answer"]
+                    self.players[sid]["last_answer"] = ans
+                    self.players[sid]["answered"] += 1
+                    if ans == correct_answer:
                         pts = (self.current_q_index + 1) * 100
-                        self.players[sid]['score'] += pts
-                        self.players[sid]['correct'] += 1
+                        self.players[sid]["score"] += pts
+                        self.players[sid]["correct"] += 1
+                        self.players[sid]["is_correct_last"] = True
+                    else:
+                        self.players[sid]["is_correct_last"] = False
 
     def get_leaderboard(self):
         players = [p for p in self.players.values() if p.get('active')]

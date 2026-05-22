@@ -190,11 +190,44 @@
   .lb-name { flex: 1; font-size: 1rem; font-weight: 600; }
   .lb-correct { color: rgba(34,197,94,0.7); font-size: 0.78rem; }
   .lb-score { color: var(--gold); font-weight: 900; font-size: 1.1rem; min-width: 60px; text-align: right; }
+  /* Results overlay */
+  .results-overlay {
+    display: none; position: fixed; inset: 0; z-index: 100;
+    background: rgba(5,8,24,0.92); padding: 40px;
+    flex-direction: column; align-items: center; justify-content: center;
+    animation: fadeIn 0.5s ease;
+  }
+  .results-overlay.show { display: flex; }
+  .results-columns {
+    display: flex; gap: 40px; width: 100%; max-width: 1000px;
+    margin-top: 20px;
+  }
+  .results-column {
+    flex: 1; display: flex; flex-direction: column; gap: 12px;
+  }
+  .results-header {
+    font-size: 1.2rem; font-weight: 700; margin-bottom: 10px;
+    text-align: center; text-transform: uppercase; letter-spacing: 2px;
+  }
+  .header-correct { color: var(--correct); }
+  .header-wrong { color: var(--wrong); }
+  .results-list {
+    display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+  }
+  .result-chip {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px; padding: 6px 16px; font-size: 0.9rem; color: white;
+    animation: popIn 0.4s ease both;
+  }
+  .result-chip.is-correct { border-color: var(--correct); background: rgba(34,197,94,0.1); }
+  .result-chip.is-wrong { border-color: var(--wrong); background: rgba(239,68,68,0.1); }
+
   /* Confetti */
   .confetti-piece {
     position: fixed; width: 9px; height: 9px; z-index: 500;
     animation: confettiFall linear forwards; top: -20px; pointer-events: none;
   }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
   @keyframes confettiFall { to { transform: translateY(105vh) rotate(720deg); opacity: 0; } }
 </style>
 {% endblock %}
@@ -227,6 +260,18 @@
 
     <!-- QUESTION -->
     <div class="phase-screen question-screen" id="phase-question">
+      <div class="results-overlay" id="results-overlay">
+        <div class="results-columns">
+          <div class="results-column">
+            <div class="results-header header-correct">Got it! ✅</div>
+            <div class="results-list" id="results-correct-list"></div>
+          </div>
+          <div class="results-column">
+            <div class="results-header header-wrong">Missed it ❌</div>
+            <div class="results-list" id="results-wrong-list"></div>
+          </div>
+        </div>
+      </div>
       <div class="q-header-row">
         <span class="q-cat-tag" id="proj-q-category">Category</span>
         <div style="display:flex;align-items:center;gap:12px;">
@@ -384,6 +429,7 @@ function startTimer(seconds) {
 
 // ── Render question ───────────────────────────────────────
 function renderQuestion(q) {
+  document.getElementById('results-overlay').classList.remove('show');
   showPhase('question');
   document.getElementById('answer-dist').classList.remove('show');
   ['A','B','C','D'].forEach(l => {
@@ -425,8 +471,9 @@ function renderQuestion(q) {
   ]);
 }
 
+
 // ── Reveal answer ─────────────────────────────────────────
-function revealAnswer(correct, stats) {
+function revealAnswer(correct, stats, lb) {
   clearInterval(timerInterval);
   ['A','B','C','D'].forEach(l => {
     const el = document.getElementById('proj-opt-' + l);
@@ -452,7 +499,33 @@ function revealAnswer(correct, stats) {
   if (correct && document.getElementById('proj-q-num').textContent === 'Q15') {
     launchConfetti();
   }
+
+  // Populate results overlay
+  if (lb) {
+    const correctList = document.getElementById('results-correct-list');
+    const wrongList = document.getElementById('results-wrong-list');
+    if (correctList && wrongList) {
+      correctList.innerHTML = '';
+      wrongList.innerHTML = '';
+
+      lb.forEach((p, i) => {
+        const chip = document.createElement('div');
+        chip.className = 'result-chip ' + (p.is_correct_last ? 'is-correct' : 'is-wrong');
+        chip.style.animationDelay = (i * 0.05) + 's';
+        chip.textContent = p.name;
+        if (p.is_correct_last) {
+          correctList.appendChild(chip);
+        } else {
+          wrongList.appendChild(chip);
+        }
+      });
+      setTimeout(() => {
+        document.getElementById('results-overlay').classList.add('show');
+      }, 1500);
+    }
+  }
 }
+
 
 // ── Leaderboard ───────────────────────────────────────────
 function renderLeaderboard(lb) {

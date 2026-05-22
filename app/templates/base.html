@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}WWTBAM{% endblock %} — Crystal Brooks</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Exo+2:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+  <!-- MathJax for LaTeX -->
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$']] },
+      svg: { fontCache: 'global' },
+      options: { skipHtmlTags: ['script','noscript','style','textarea','pre'] }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js" async></script>
+  <style>
+    :root {
+      --gold: #FFD700;
+      --gold-light: #FFF176;
+      --gold-dark: #B8860B;
+      --deep-blue: #0A0E2E;
+      --mid-blue: #0D1B4B;
+      --accent-blue: #1E3A8A;
+      --glow-blue: #3B82F6;
+      --correct: #22C55E;
+      --wrong: #EF4444;
+      --neutral: #6B7280;
+      --white: #FFFFFF;
+      --font-display: 'Cinzel Decorative', serif;
+      --font-body: 'Exo 2', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: var(--font-body);
+      background: var(--deep-blue);
+      color: var(--white);
+      overflow-x: hidden;
+    }
+    .gold-text { color: var(--gold); }
+    .glow {
+      text-shadow: 0 0 10px var(--gold), 0 0 20px var(--gold), 0 0 40px var(--gold-dark);
+    }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 10px 22px; border: none; border-radius: 8px; cursor: pointer;
+      font-family: var(--font-body); font-weight: 700; font-size: 14px;
+      transition: all 0.2s ease; text-decoration: none; letter-spacing: 0.5px;
+    }
+    .btn-gold {
+      background: linear-gradient(135deg, var(--gold-dark), var(--gold), var(--gold-light));
+      color: var(--deep-blue);
+      box-shadow: 0 4px 15px rgba(255,215,0,0.4);
+    }
+    .btn-gold:hover { transform: translateY(-2px); box-shadow: 0 6px 25px rgba(255,215,0,0.6); }
+    .btn-danger { background: var(--wrong); color: white; }
+    .btn-ghost { background: transparent; border: 1px solid rgba(255,215,0,0.4); color: var(--gold); }
+    .btn-ghost:hover { background: rgba(255,215,0,0.1); }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+{% block body %}{% endblock %}
+{% block scripts %}{% endblock %}
+</body>
+</html>

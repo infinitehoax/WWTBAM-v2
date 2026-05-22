@@ -1,0 +1,157 @@
+[
+  {
+    "category": "Mathematics",
+    "difficulty": 1,
+    "question_text": "What is 15% of 200?",
+    "use_latex": false,
+    "options": {"A": "25", "B": "30", "C": "35", "D": "40"},
+    "correct_answer": "B",
+    "time_limit": 20,
+    "prize_value": "₦1,000"
+  },
+  {
+    "category": "Science",
+    "difficulty": 2,
+    "question_text": "What is the chemical formula for water?",
+    "use_latex": true,
+    "options": {"A": "H_2O_2", "B": "HO_2", "C": "H_2O", "D": "H_3O"},
+    "correct_answer": "C",
+    "time_limit": 20,
+    "prize_value": "₦2,000"
+  },
+  {
+    "category": "Mathematics",
+    "difficulty": 3,
+    "question_text": "Solve for $x$: $2x^2 - 8 = 0$",
+    "use_latex": true,
+    "options": {
+      "A": "$x = \\pm 2$",
+      "B": "$x = \\pm 4$",
+      "C": "$x = 2$ only",
+      "D": "$x = 4$ only"
+    },
+    "correct_answer": "A",
+    "time_limit": 30,
+    "prize_value": "₦3,000"
+  },
+  {
+    "category": "Physics",
+    "difficulty": 4,
+    "question_text": "What is the SI unit of electric current?",
+    "use_latex": false,
+    "options": {"A": "Volt", "B": "Watt", "C": "Ampere", "D": "Ohm"},
+    "correct_answer": "C",
+    "time_limit": 25,
+    "prize_value": "₦5,000"
+  },
+  {
+    "category": "Mathematics",
+    "difficulty": 5,
+    "question_text": "If $\\int_0^2 f(x)\\,dx = 5$, what is $\\int_0^2 3f(x)\\,dx$?",
+    "use_latex": true,
+    "options": {"A": "5", "B": "8", "C": "15", "D": "20"},
+    "correct_answer": "C",
+    "time_limit": 35,
+    "prize_value": "₦7,500"
+  },
+  {
+    "category": "Geography",
+    "difficulty": 6,
+    "question_text": "Which river is the longest in Africa?",
+    "use_latex": false,
+    "options": {"A": "Congo", "B": "Niger", "C": "Zambezi", "D": "Nile"},
+    "correct_answer": "D",
+    "time_limit": 25,
+    "prize_value": "₦10,000"
+  },
+  {
+    "category": "Chemistry",
+    "difficulty": 7,
+    "question_text": "What is the atomic number of Gold (Au)?",
+    "use_latex": false,
+    "options": {"A": "47", "B": "79", "C": "82", "D": "29"},
+    "correct_answer": "B",
+    "time_limit": 30,
+    "prize_value": "₦15,000"
+  },
+  {
+    "category": "Mathematics",
+    "difficulty": 8,
+    "question_text": "What is $\\lim_{x \\to 0} \\frac{\\sin x}{x}$?",
+    "use_latex": true,
+    "options": {"A": "0", "B": "$\\infty$", "C": "1", "D": "undefined"},
+    "correct_answer": "C",
+    "time_limit": 35,
+    "prize_value": "₦20,000"
+  },
+  {
+    "category": "Biology",
+    "difficulty": 9,
+    "question_text": "Which organelle is known as the powerhouse of the cell?",
+    "use_latex": false,
+    "options": {"A": "Nucleus", "B": "Ribosome", "C": "Golgi body", "D": "Mitochondria"},
+    "correct_answer": "D",
+    "time_limit": 25,
+    "prize_value": "₦30,000"
+  },
+  {
+    "category": "Mathematics",
+    "difficulty": 10,
+    "question_text": "If $A = \\begin{pmatrix} 2 & 1 \\\\ 0 & 3 \\end{pmatrix}$, what is $\\det(A)$?",
+    "use_latex": true,
+    "options": {"A": "5", "B": "6", "C": "7", "D": "8"},
+    "correct_answer": "B",
+    "time_limit": 40,
+    "prize_value": "₦50,000"
+  },
+  {
+    "category": "History",
+    "difficulty": 11,
+    "question_text": "In what year did Nigeria gain independence?",
+    "use_latex": false,
+    "options": {"A": "1957", "B": "1960", "C": "1963", "D": "1966"},
+    "correct_answer": "B",
+    "time_limit": 25,
+    "prize_value": "₦75,000"
+  },
+  {
+    "category": "Physics",
+    "difficulty": 12,
+    "question_text": "Einstein's mass-energy equivalence is expressed as $E = mc^2$. If mass doubles, the energy:",
+    "use_latex": true,
+    "options": {"A": "Stays the same", "B": "Doubles", "C": "Quadruples", "D": "Halves"},
+    "correct_answer": "B",
+    "time_limit": 35,
+    "prize_value": "₦150,000"
+  },
+  {
+    "category": "Mathematics",
+    "difficulty": 13,
+    "question_text": "What is the sum of the infinite geometric series $1 + \\frac{1}{2} + \\frac{1}{4} + \\cdots$?",
+    "use_latex": true,
+    "options": {"A": "$\\frac{3}{2}$", "B": "$2$", "C": "$\\frac{5}{2}$", "D": "$3$"},
+    "correct_answer": "B",
+    "time_limit": 45,
+    "prize_value": "₦300,000"
+  },
+  {
+    "category": "Logic",
+    "difficulty": 14,
+    "question_text": "A man builds a house with 4 walls. Each wall faces south. A bear walks by. What color is the bear?",
+    "use_latex": false,
+    "options": {"A": "Brown", "B": "Black", "C": "White", "D": "Gray"},
+    "correct_answer": "C",
+    "time_limit": 45,
+    "prize_value": "₦500,000"
+  },
+  {
+    "category": "Mathematics",
+    "difficulty": 15,
+    "question_text": "What is the value of $e^{i\\pi} + 1$? (Euler's identity)",
+    "use_latex": true,
+    "options": {"A": "$1$", "B": "$-1$", "C": "$0$", "D": "$2i$"},
+    "correct_answer": "C",
+    "time_limit": 50,
+    "prize_value": "₦1,000,000"
+  }
+]

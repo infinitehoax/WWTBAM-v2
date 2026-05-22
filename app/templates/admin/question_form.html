@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if question else 'New' }} Question{% endblock %}
+{% block extra_head %}
+<style>
+  body { background: #070B24; }
+  .page-wrap { max-width: 860px; margin: 0 auto; padding: 30px 20px; }
+  .page-header { display: flex; align-items: center; gap: 16px; margin-bottom: 30px; }
+  .page-title { font-family: var(--font-display); font-size: 1.3rem; color: var(--gold); }
+  .form-card {
+    background: rgba(13,27,75,0.7); border: 1px solid rgba(255,215,0,0.15);
+    border-radius: 16px; padding: 30px;
+  }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .form-group { display: flex; flex-direction: column; gap: 7px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: rgba(255,215,0,0.6); }
+  input[type="text"], input[type="number"], input[type="url"], select, textarea {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,215,0,0.2);
+    border-radius: 9px; color: white; font-family: var(--font-body);
+    padding: 10px 14px; font-size: 0.9rem; outline: none; width: 100%;
+    transition: border-color 0.2s;
+  }
+  input:focus, select:focus, textarea:focus { border-color: var(--gold); background: rgba(255,215,0,0.04); }
+  select option { background: #0D1B4B; }
+  textarea { resize: vertical; min-height: 90px; }
+  .options-section { margin-top: 6px; }
+  .options-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: rgba(255,215,0,0.6); margin-bottom: 14px;
+    padding-bottom: 8px; border-bottom: 1px solid rgba(255,215,0,0.1); }
+  .option-row {
+    display: grid; grid-template-columns: 36px 1fr 1fr auto; gap: 10px;
+    align-items: start; margin-bottom: 12px;
+  }
+  .opt-badge {
+    width: 36px; height: 36px; border-radius: 50%; background: rgba(255,215,0,0.15);
+    border: 1px solid rgba(255,215,0,0.3); color: var(--gold); font-weight: 700;
+    display: flex; align-items: center; justify-content: center; font-size: 0.9rem;
+    margin-top: 0;
+  }
+  .correct-radio { display: flex; align-items: center; gap: 8px; padding-top: 10px; }
+  .correct-radio input { width: auto; }
+  .correct-radio label { font-size: 0.8rem; text-transform: none; letter-spacing: 0; color: rgba(255,255,255,0.6); }
+  .preview-box {
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px; padding: 16px; margin-top: 16px;
+  }
+  .preview-label { font-size: 0.7rem; color: rgba(255,215,0,0.5); text-transform: uppercase;
+    letter-spacing: 1px; margin-bottom: 10px; }
+  .preview-content { font-size: 1rem; color: rgba(255,255,255,0.85); }
+  .btn-row { display: flex; gap: 12px; margin-top: 24px; }
+  .checkbox-wrap { display: flex; align-items: center; gap: 10px; padding-top: 4px; }
+  .checkbox-wrap input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--gold); }
+  .checkbox-wrap label { font-size: 0.85rem; text-transform: none; letter-spacing: 0; color: rgba(255,255,255,0.7); }
+</style>
+{% endblock %}
+{% block body %}
+<div class="page-wrap">
+  <div class="page-header">
+    <a href="/admin/questions" class="btn btn-ghost" style="padding:7px 14px;font-size:0.8rem;">← Back</a>
+    <div class="page-title">{{ 'Edit Question' if question else 'New Question' }}</div>
+  </div>
+
+  <form method="POST" class="form-card">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Category</label>
+        <input type="text" name="category" value="{{ question.category if question else '' }}" placeholder="e.g. Mathematics">
+      </div>
+      <div class="form-group">
+        <label>Difficulty (1–15)</label>
+        <input type="number" name="difficulty" min="1" max="15" value="{{ question.difficulty if question else 1 }}">
+      </div>
+      <div class="form-group full">
+        <label>Question Text (supports LaTeX with $ delimiters)</label>
+        <textarea name="question_text" id="q-text" placeholder="Enter question. Use $...$ for inline math or $$...$$ for display math."
+          oninput="updatePreview()">{{ question.question_text if question else '' }}</textarea>
+      </div>
+      <div class="form-group full">
+        <label>Question Image URL (optional)</label>
+        <input type="url" name="question_image" value="{{ question.question_image or '' }}" placeholder="https://... (leave blank for none)">
+      </div>
+      <div class="form-group full">
+        <div class="checkbox-wrap">
+          <input type="checkbox" name="use_latex" id="use-latex" {{ 'checked' if question and question.use_latex else '' }}>
+          <label for="use-latex">This question uses LaTeX (enables MathJax rendering)</label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Time Limit (seconds)</label>
+        <input type="number" name="time_limit" min="10" max="120" value="{{ question.time_limit if question else 30 }}">
+      </div>
+      <div class="form-group">
+        <label>Prize Value</label>
+        <select name="prize_value">
+          {% set prizes = ['₦1,000','₦2,000','₦3,000','₦5,000','₦7,500','₦10,000','₦15,000','₦20,000','₦30,000','₦50,000','₦75,000','₦150,000','₦300,000','₦500,000','₦1,000,000'] %}
+          {% for p in prizes %}
+          <option value="{{ p }}" {{ 'selected' if question and question.prize_value == p else '' }}>{{ p }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <!-- Live Preview -->
+    <div class="preview-box">
+      <div class="preview-label">Live Preview</div>
+      <div class="preview-content" id="q-preview">Type your question above...</div>
+    </div>
+
+    <!-- Options -->
+    <div class="options-section" style="margin-top:24px;">
+      <div class="options-title">Answer Options</div>
+      {% for letter in ['A','B','C','D'] %}
+      {% set attr = 'option_' + letter.lower() %}
+      {% set img_attr = 'option_' + letter.lower() + '_image' %}
+      <div class="option-row">
+        <div class="opt-badge">{{ letter }}</div>
+        <div>
+          <input type="text" name="{{ attr }}" placeholder="Option {{ letter }} text (supports $LaTeX$)"
+            value="{{ question[attr] if question else '' }}"
+            id="opt-{{ letter }}" oninput="updatePreview()">
+        </div>
+        <div>
+          <input type="url" name="{{ img_attr }}" placeholder="Image URL (optional)"
+            value="{{ question[img_attr] if question else '' }}">
+        </div>
+        <div class="correct-radio">
+          <input type="radio" name="correct_answer" value="{{ letter }}" id="correct-{{ letter }}"
+            {{ 'checked' if question and question.correct_answer == letter else ('checked' if not question and letter == 'A' else '') }}>
+          <label for="correct-{{ letter }}">Correct</label>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="btn-row">
+      <button type="submit" class="btn btn-gold">💾 Save Question</button>
+      <a href="/admin/questions" class="btn btn-ghost">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  function updatePreview() {
+    const text = document.getElementById('q-text').value;
+    document.getElementById('q-preview').textContent = text || 'Type your question above...';
+    if (window.MathJax) MathJax.typesetPromise([document.getElementById('q-preview')]);
+  }
+  updatePreview();
+</script>
+{% endblock %}

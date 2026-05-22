@@ -1,0 +1,588 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block extra_head %}
+<style>
+  body { background: #070B24; font-family: var(--font-body); }
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 28px; background: rgba(13,27,75,0.95);
+    border-bottom: 1px solid rgba(255,215,0,0.2);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .topbar-title { font-family: var(--font-display); font-size: 1.1rem; color: var(--gold); }
+  .topbar-nav { display: flex; gap: 10px; align-items: center; }
+  .badge { background: rgba(255,215,0,0.15); border: 1px solid rgba(255,215,0,0.3);
+    color: var(--gold); padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+  .layout { display: grid; grid-template-columns: 320px 1fr; gap: 0; min-height: calc(100vh - 60px); }
+  .sidebar {
+    background: rgba(13,27,75,0.7); border-right: 1px solid rgba(255,215,0,0.1);
+    padding: 20px; overflow-y: auto; max-height: calc(100vh - 60px);
+  }
+  .main { padding: 24px; overflow-y: auto; max-height: calc(100vh - 60px); }
+  .section-title {
+    font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px;
+    color: rgba(255,215,0,0.5); margin: 20px 0 10px; padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255,215,0,0.1);
+  }
+  .section-title:first-child { margin-top: 0; }
+
+  /* Status Panel */
+  .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 4px; }
+  .stat-box {
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px; padding: 12px; text-align: center;
+  }
+  .stat-num { font-size: 1.6rem; font-weight: 900; color: var(--gold); line-height: 1; }
+  .stat-label { font-size: 0.7rem; color: rgba(255,255,255,0.4); margin-top: 4px; text-transform: uppercase; letter-spacing: 1px; }
+
+  /* Room code */
+  .room-code-box {
+    background: rgba(255,215,0,0.08); border: 1px solid rgba(255,215,0,0.3);
+    border-radius: 10px; padding: 14px; text-align: center; margin-bottom: 4px;
+  }
+  .room-code { font-size: 2rem; font-weight: 900; color: var(--gold); letter-spacing: 6px; }
+  .room-code-hint { font-size: 0.72rem; color: rgba(255,255,255,0.4); margin-top: 4px; }
+
+  /* Sound buttons */
+  .sound-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .sound-btn {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px; padding: 10px 8px; cursor: pointer; color: white;
+    font-family: var(--font-body); font-size: 0.8rem; font-weight: 600;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    transition: all 0.2s;
+  }
+  .sound-btn:hover { background: rgba(255,215,0,0.1); border-color: rgba(255,215,0,0.4); color: var(--gold); }
+  .sound-btn.active { background: rgba(255,215,0,0.2); border-color: var(--gold); color: var(--gold); }
+
+  /* Question list */
+  .q-list { display: flex; flex-direction: column; gap: 8px; }
+  .q-item {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px; padding: 10px 12px; cursor: pointer; transition: all 0.2s;
+  }
+  .q-item:hover { background: rgba(255,215,0,0.08); border-color: rgba(255,215,0,0.3); }
+  .q-item.active { background: rgba(255,215,0,0.15); border-color: var(--gold); }
+  .q-num {
+    background: var(--gold); color: var(--deep-blue); width: 26px; height: 26px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: 900; flex-shrink: 0;
+  }
+  .q-info { flex: 1; min-width: 0; }
+  .q-text { font-size: 0.8rem; color: rgba(255,255,255,0.8); white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; }
+  .q-meta { font-size: 0.7rem; color: rgba(255,215,0,0.5); margin-top: 2px; }
+  .push-btn {
+    background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+    color: var(--deep-blue); border: none; border-radius: 6px; padding: 6px 12px;
+    font-size: 0.75rem; font-weight: 700; cursor: pointer; white-space: nowrap;
+    transition: opacity 0.2s;
+  }
+  .push-btn:hover { opacity: 0.85; }
+
+  /* Main panels */
+  .panel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .panel {
+    background: rgba(13,27,75,0.6); border: 1px solid rgba(255,215,0,0.15);
+    border-radius: 14px; padding: 20px;
+  }
+  .panel-header { font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1.5px; color: rgba(255,215,0,0.6); margin-bottom: 14px; display: flex;
+    align-items: center; gap: 8px; }
+  .panel-header .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold);
+    animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* Live players */
+  .player-list { display: flex; flex-direction: column; gap: 6px; max-height: 300px; overflow-y: auto; }
+  .player-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    background: rgba(255,255,255,0.04); border-radius: 8px; padding: 8px 12px;
+  }
+  .player-name { font-size: 0.85rem; font-weight: 600; }
+  .player-score { color: var(--gold); font-weight: 700; font-size: 0.85rem; }
+  .player-ans { font-size: 0.75rem; padding: 3px 8px; border-radius: 4px; font-weight: 700; }
+  .ans-A { background: rgba(59,130,246,0.3); color: #93C5FD; }
+  .ans-B { background: rgba(234,179,8,0.3); color: #FDE68A; }
+  .ans-C { background: rgba(168,85,247,0.3); color: #D8B4FE; }
+  .ans-D { background: rgba(249,115,22,0.3); color: #FED7AA; }
+  .no-ans { color: rgba(255,255,255,0.3); font-size: 0.75rem; font-style: italic; }
+
+  /* Current question preview */
+  .q-preview { background: rgba(255,255,255,0.03); border-radius: 10px; padding: 16px; }
+  .q-preview-text { font-size: 0.9rem; color: rgba(255,255,255,0.85); margin-bottom: 12px; line-height: 1.5; }
+  .options-preview { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .opt-prev {
+    display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.05);
+    border-radius: 8px; padding: 8px 10px; font-size: 0.8rem;
+  }
+  .opt-prev.correct { background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.4); }
+  .opt-letter {
+    background: rgba(255,215,0,0.2); color: var(--gold); width: 22px; height: 22px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
+  }
+
+  /* Action buttons row */
+  .action-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+
+  /* Lifeline controls */
+  .lifeline-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+  .ll-btn {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px; padding: 14px 10px; cursor: pointer; color: white;
+    font-family: var(--font-body); font-size: 0.85rem; font-weight: 600;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    transition: all 0.2s;
+  }
+  .ll-btn:hover { border-color: rgba(255,215,0,0.5); background: rgba(255,215,0,0.08); color: var(--gold); }
+  .ll-icon { font-size: 1.6rem; }
+
+  /* Timer display */
+  .timer-display {
+    font-size: 3rem; font-weight: 900; color: var(--gold); text-align: center;
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 20px rgba(255,215,0,0.5);
+  }
+  .timer-display.urgent { color: var(--wrong); text-shadow: 0 0 20px rgba(239,68,68,0.5); animation: timerPulse 0.5s infinite; }
+  @keyframes timerPulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
+  /* Prize ladder sidebar */
+  .prize-ladder { display: flex; flex-direction: column; gap: 3px; }
+  .prize-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 5px 10px; border-radius: 6px; font-size: 0.8rem;
+    border: 1px solid transparent;
+  }
+  .prize-row.current {
+    background: rgba(255,215,0,0.15); border-color: rgba(255,215,0,0.4); color: var(--gold); font-weight: 700;
+  }
+  .prize-row.safe { color: #FCA5A5; }
+  .prize-row .prize-n { color: rgba(255,255,255,0.4); }
+
+  /* Phone hint */
+  .hint-area { display: flex; gap: 8px; }
+  .hint-input {
+    flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,215,0,0.25);
+    border-radius: 8px; color: white; font-family: var(--font-body); padding: 8px 12px;
+    font-size: 0.85rem; outline: none;
+  }
+  .hint-input:focus { border-color: var(--gold); }
+
+  /* Toast */
+  #toast {
+    position: fixed; bottom: 30px; right: 30px; background: rgba(34,197,94,0.9);
+    color: white; padding: 12px 20px; border-radius: 10px; font-weight: 600;
+    font-size: 0.9rem; z-index: 9999; transform: translateY(100px); opacity: 0;
+    transition: all 0.3s ease;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.error { background: rgba(239,68,68,0.9); }
+
+  /* Answer bar chart */
+  .answer-bars { display: flex; gap: 8px; align-items: flex-end; height: 80px; margin-top: 10px; }
+  .answer-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .answer-bar {
+    width: 100%; background: rgba(255,215,0,0.6); border-radius: 4px 4px 0 0;
+    transition: height 0.5s ease; min-height: 4px;
+  }
+  .answer-bar-label { font-size: 0.75rem; color: rgba(255,255,255,0.6); font-weight: 700; }
+  .answer-bar-count { font-size: 0.7rem; color: var(--gold); }
+</style>
+{% endblock %}
+{% block body %}
+<div class="topbar">
+  <div class="topbar-title">👑 WWTBAM Control Room</div>
+  <div class="topbar-nav">
+    <span class="badge" id="phase-badge">LOBBY</span>
+    <span class="badge" id="players-badge">0 Players</span>
+    <a href="/admin/questions/new" class="btn btn-ghost" style="padding:6px 14px;font-size:0.8rem;">+ Question</a>
+    <a href="/screen" target="_blank" class="btn btn-ghost" style="padding:6px 14px;font-size:0.8rem;">📺 Screen</a>
+    <a href="/admin/logout" class="btn btn-ghost" style="padding:6px 14px;font-size:0.8rem;">Logout</a>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="section-title">Room Code</div>
+    <div class="room-code-box">
+      <div class="room-code" id="room-code-display">{{ room_code or '——' }}</div>
+      <div class="room-code-hint">Students go to: <strong>/play</strong></div>
+      <button class="btn btn-gold" style="margin-top:10px;padding:6px 16px;font-size:0.8rem;" onclick="generateRoom()">Generate Code</button>
+    </div>
+
+    <div class="section-title">Game Controls</div>
+    <div class="action-row" style="margin-bottom:10px;">
+      <button class="btn btn-gold" onclick="revealAnswer()" id="btn-reveal">Reveal Answer</button>
+      <button class="btn btn-ghost" onclick="showLeaderboard()">Leaderboard</button>
+    </div>
+    <button class="btn btn-danger" onclick="if(confirm('Reset game?')) resetGame()" style="width:100%;margin-bottom:4px;">⚠ Reset Game</button>
+
+    <div class="section-title">Timer</div>
+    <div class="timer-display" id="admin-timer">--</div>
+
+    <div class="section-title">Sounds</div>
+    <div class="sound-grid">
+      <button class="sound-btn" onclick="playSound('theme')">🎵 Theme</button>
+      <button class="sound-btn" onclick="playSound('suspense')">😰 Suspense</button>
+      <button class="sound-btn" onclick="playSound('correct')">✅ Correct</button>
+      <button class="sound-btn" onclick="playSound('wrong')">❌ Wrong</button>
+      <button class="sound-btn" onclick="playSound('lockin')">🔒 Lock In</button>
+      <button class="sound-btn" onclick="playSound('million')">💰 Million</button>
+    </div>
+
+    <div class="section-title">Lifelines</div>
+    <div class="lifeline-grid">
+      <button class="ll-btn" onclick="use5050()"><span class="ll-icon">✂️</span>50:50</button>
+      <button class="ll-btn" onclick="useAudiencePoll()"><span class="ll-icon">📊</span>Audience</button>
+      <button class="ll-btn" onclick="showPhoneHint()"><span class="ll-icon">📞</span>Phone</button>
+    </div>
+    <div class="hint-area" id="phone-hint-area" style="display:none;margin-top:10px;">
+      <input class="hint-input" id="hint-text" placeholder="Type hint for students...">
+      <button class="btn btn-gold" onclick="sendHint()" style="padding:8px 14px;">Send</button>
+    </div>
+
+    <div class="section-title">Prize Ladder</div>
+    <div class="prize-ladder" id="prize-ladder">
+      {% for p in prize_ladder|reverse %}
+      <div class="prize-row {% if loop.revindex0 in [4,9] %}safe{% endif %}" data-idx="{{ loop.revindex - 1 }}">
+        <span class="prize-n">Q{{ loop.revindex }}</span>
+        <span>{{ p }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="panel-grid">
+      <!-- Current Question Preview -->
+      <div class="panel" style="grid-column: 1 / -1;">
+        <div class="panel-header"><span class="dot"></span>Current Question</div>
+        <div id="current-q-preview">
+          <div style="color:rgba(255,255,255,0.3);font-style:italic;text-align:center;padding:20px;">
+            No question active. Select one from the list below.
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Players / Spy View -->
+      <div class="panel">
+        <div class="panel-header"><span class="dot"></span>Players & Answers <span id="answer-count" style="margin-left:auto;color:var(--gold);font-size:0.9rem;"></span></div>
+        <div class="player-list" id="player-list">
+          <div style="color:rgba(255,255,255,0.3);font-style:italic;font-size:0.85rem;">Waiting for players...</div>
+        </div>
+        <!-- Answer distribution bars -->
+        <div class="answer-bars" id="answer-bars" style="display:none;">
+          <div class="answer-bar-wrap">
+            <div class="answer-bar" id="bar-A" style="height:4px;"></div>
+            <div class="answer-bar-label">A</div>
+            <div class="answer-bar-count" id="cnt-A">0</div>
+          </div>
+          <div class="answer-bar-wrap">
+            <div class="answer-bar" id="bar-B" style="height:4px;background:rgba(234,179,8,0.6)"></div>
+            <div class="answer-bar-label">B</div>
+            <div class="answer-bar-count" id="cnt-B">0</div>
+          </div>
+          <div class="answer-bar-wrap">
+            <div class="answer-bar" id="bar-C" style="height:4px;background:rgba(168,85,247,0.6)"></div>
+            <div class="answer-bar-label">C</div>
+            <div class="answer-bar-count" id="cnt-C">0</div>
+          </div>
+          <div class="answer-bar-wrap">
+            <div class="answer-bar" id="bar-D" style="height:4px;background:rgba(249,115,22,0.6)"></div>
+            <div class="answer-bar-label">D</div>
+            <div class="answer-bar-count" id="cnt-D">0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Leaderboard preview -->
+      <div class="panel">
+        <div class="panel-header"><span class="dot"></span>Live Scores</div>
+        <div class="player-list" id="score-list">
+          <div style="color:rgba(255,255,255,0.3);font-style:italic;font-size:0.85rem;">No scores yet.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Question List -->
+    <div class="panel">
+      <div class="panel-header"><span class="dot"></span>Question Bank
+        <a href="/admin/questions" style="margin-left:auto;color:rgba(255,215,0,0.6);font-size:0.8rem;text-decoration:none;">Manage All →</a>
+      </div>
+      <div class="q-list" id="q-list">
+        {% for q in questions %}
+        <div class="q-item" id="qi-{{ q.id }}" onclick="selectQuestion({{ q.id }}, {{ loop.index0 }})">
+          <div class="q-num">{{ loop.index }}</div>
+          <div class="q-info">
+            <div class="q-text">{{ q.question_text[:80] }}{% if q.question_text|length > 80 %}...{% endif %}</div>
+            <div class="q-meta">{{ q.category }} · {{ q.prize_value }} · {{ q.time_limit }}s</div>
+          </div>
+          <button class="push-btn" onclick="event.stopPropagation(); pushQuestion({{ q.id }}, {{ loop.index0 }})">▶ Push</button>
+        </div>
+        {% else %}
+        <div style="color:rgba(255,255,255,0.3);text-align:center;padding:20px;font-style:italic;">
+          No questions yet. <a href="/admin/questions/new" style="color:var(--gold);">Add one →</a>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/sockets/admin_sock.js"></script>
+<script>
+  let selectedQId = null, selectedQIdx = 0;
+  let players = {}, answers = {}, currentQ = null;
+  let timerInterval = null, timerEnd = null;
+
+  // Select question (highlight)
+  function selectQuestion(id, idx) {
+    document.querySelectorAll('.q-item').forEach(el => el.classList.remove('active'));
+    const el = document.getElementById('qi-' + id);
+    if (el) el.classList.add('active');
+    selectedQId = id; selectedQIdx = idx;
+  }
+
+  // Push question
+  function pushQuestion(id, idx) {
+    selectQuestion(id, idx);
+    socket.emit('admin_push_question', {question_id: id, index: idx});
+    toast('Question pushed!');
+  }
+
+  function revealAnswer() {
+    socket.emit('admin_reveal_answer', {});
+  }
+
+  function showLeaderboard() {
+    socket.emit('admin_show_leaderboard');
+    window.open('/screen/leaderboard', '_blank');
+  }
+
+  function resetGame() {
+    socket.emit('admin_reset_game');
+    answers = {};
+    updateAnswerBars({A:0,B:0,C:0,D:0});
+    document.getElementById('player-list').innerHTML = '<div style="color:rgba(255,255,255,0.3);font-style:italic;font-size:0.85rem;">Waiting for players...</div>';
+    toast('Game reset!');
+  }
+
+  function playSound(sound) {
+    socket.emit('admin_play_sound', {sound});
+    toast('▶ Playing: ' + sound);
+  }
+
+  function use5050() {
+    socket.emit('admin_use_5050', {sid: ''});
+    toast('50:50 activated!');
+  }
+
+  function useAudiencePoll() {
+    socket.emit('admin_audience_poll');
+    toast('Audience poll started!');
+  }
+
+  function showPhoneHint() {
+    const area = document.getElementById('phone-hint-area');
+    area.style.display = area.style.display === 'none' ? 'flex' : 'none';
+  }
+
+  function sendHint() {
+    const hint = document.getElementById('hint-text').value;
+    if (!hint.trim()) return;
+    socket.emit('admin_phone_hint', {hint});
+    document.getElementById('hint-text').value = '';
+    toast('Phone hint sent!');
+  }
+
+  function generateRoom() {
+    fetch('/admin/generate-room').then(r=>r.json()).then(d => {
+      document.getElementById('room-code-display').textContent = d.code;
+      toast('Room code: ' + d.code);
+    });
+  }
+
+  function toast(msg, isError=false) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'show' + (isError ? ' error' : '');
+    clearTimeout(window._toastTimer);
+    window._toastTimer = setTimeout(() => el.className = '', 2500);
+  }
+
+  // Timer
+  function startTimer(seconds) {
+    clearInterval(timerInterval);
+    timerEnd = Date.now() + seconds * 1000;
+    timerInterval = setInterval(() => {
+      const rem = Math.max(0, Math.ceil((timerEnd - Date.now()) / 1000));
+      const el = document.getElementById('admin-timer');
+      el.textContent = rem;
+      el.className = 'timer-display' + (rem <= 5 ? ' urgent' : '');
+      if (rem === 0) clearInterval(timerInterval);
+    }, 200);
+  }
+
+  // Update answer bars
+  function updateAnswerBars(stats) {
+    const total = Object.values(stats).reduce((a,b)=>a+b,0);
+    const barsEl = document.getElementById('answer-bars');
+    if (total > 0) barsEl.style.display = 'flex';
+    ['A','B','C','D'].forEach(letter => {
+      const count = stats[letter] || 0;
+      const pct = total > 0 ? (count / total) * 76 : 4;
+      document.getElementById('bar-'+letter).style.height = pct + 'px';
+      document.getElementById('cnt-'+letter).textContent = count;
+    });
+    const ansCount = document.getElementById('answer-count');
+    if (ansCount) ansCount.textContent = total + ' answered';
+  }
+
+  // Update prize ladder highlight
+  function updatePrizeLadder(idx) {
+    document.querySelectorAll('.prize-row').forEach(row => {
+      row.classList.remove('current');
+      if (parseInt(row.dataset.idx) === idx) row.classList.add('current');
+    });
+  }
+
+  // Render player list
+  function renderPlayers() {
+    const list = document.getElementById('player-list');
+    const playerArr = Object.values(players).filter(p => p.active !== false);
+    if (playerArr.length === 0) {
+      list.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-style:italic;font-size:0.85rem;">Waiting for players...</div>';
+      document.getElementById('score-list').innerHTML = '<div style="color:rgba(255,255,255,0.3);font-style:italic;font-size:0.85rem;">No scores yet.</div>';
+      return;
+    }
+    list.innerHTML = playerArr.map(p => {
+      const ans = answers[p.sid];
+      const ansHtml = ans
+        ? `<span class="player-ans ans-${ans.answer}">${ans.answer} (${ans.time.toFixed(1)}s)</span>`
+        : `<span class="no-ans">thinking...</span>`;
+      return `<div class="player-row">
+        <span class="player-name">${p.name}</span>
+        ${ansHtml}
+        <span class="player-score">${p.score || 0}</span>
+      </div>`;
+    }).join('');
+    document.getElementById('players-badge').textContent = playerArr.length + ' Players';
+
+    // Auto-update Live Scores list sorted by score
+    const sortedPlayers = [...playerArr].sort((a, b) => (b.score || 0) - (a.score || 0));
+    renderScores(sortedPlayers);
+  }
+
+  // Render score list
+  function renderScores(lb) {
+    const list = document.getElementById('score-list');
+    if (!lb || lb.length === 0) {
+      list.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-style:italic;font-size:0.85rem;">No scores yet.</div>';
+      return;
+    }
+    list.innerHTML = lb.map((p, i) => `
+      <div class="player-row">
+        <span style="color:rgba(255,215,0,0.5);font-size:0.75rem;width:18px;">${i+1}</span>
+        <span class="player-name">${p.name}</span>
+        <span class="player-score">${p.score}</span>
+      </div>`).join('');
+  }
+
+  // Render current question preview
+  function renderQuestionPreview(q) {
+    if (!q) return;
+    currentQ = q;
+    const opts = q.options || {};
+    const optHtml = ['A','B','C','D'].map(l => `
+      <div class="opt-prev ${l === q.correct_answer ? 'correct' : ''}">
+        <span class="opt-letter">${l}</span>
+        <span>${opts[l] ? opts[l].text || opts[l] : ''}</span>
+      </div>`).join('');
+    document.getElementById('current-q-preview').innerHTML = `
+      <div class="q-preview">
+        <div class="q-preview-text">${q.question_text}</div>
+        <div class="options-preview">${optHtml}</div>
+      </div>`;
+    if (window.MathJax) MathJax.typesetPromise();
+  }
+
+  // Socket event handlers (called from admin_sock.js)
+  window.onPlayerJoined = function(data) {
+    // Remove old sid entry for same player if reconnecting
+    for (const sid in players) {
+      if (players[sid].name === data.name && sid !== data.sid) {
+        delete players[sid];
+        delete answers[sid];
+        break;
+      }
+    }
+    players[data.sid] = {
+      sid: data.sid,
+      name: data.name,
+      score: data.score || 0,
+      active: true
+    };
+    // Restore their answer if they had one before reconnecting
+    if (data.answer) {
+      answers[data.sid] = { answer: data.answer, time: data.answer_time || 0 };
+    }
+    renderPlayers();
+    toast('(+) ' + data.name + ' joined!');
+  };
+  window.onPlayerLeft = function(data) {
+    if (players[data.sid]) players[data.sid].active = false;
+    renderPlayers();
+  };
+  window.onAdminSpyUpdate = function(data) {
+    answers[data.sid] = {answer: data.answer, time: data.time};
+    if (players[data.sid]) players[data.sid].name = data.name;
+    renderPlayers();
+    // count totals
+    const stats = {A:0,B:0,C:0,D:0};
+    Object.values(answers).forEach(a => { if (stats[a.answer] !== undefined) stats[a.answer]++; });
+    updateAnswerBars(stats);
+  };
+  window.onNewQuestion = function(data) {
+    answers = {};
+    updateAnswerBars({A:0,B:0,C:0,D:0});
+    document.getElementById('answer-bars').style.display = 'none';
+    renderQuestionPreview(data);
+    startTimer(data.time_limit || 30);
+    updatePrizeLadder(data.q_index || 0);
+    document.getElementById('phase-badge').textContent = 'QUESTION';
+  };
+  window.onAnswerRevealed = function(data) {
+    updateAnswerBars(data.answer_stats);
+    if (data.leaderboard) {
+      data.leaderboard.forEach(p => {
+        if (players[p.sid]) {
+          players[p.sid].score = p.score;
+        }
+      });
+    }
+    renderPlayers();
+    document.getElementById('phase-badge').textContent = 'REVEAL';
+    clearInterval(timerInterval);
+  };
+  window.onStateSnapshot = function(data) {
+    if (data.players) {
+      data.players.forEach(p => { players[p.sid] = p; });
+      renderPlayers();
+    }
+    if (data.current_question) renderQuestionPreview(data.current_question);
+    if (data.current_q_index >= 0) updatePrizeLadder(data.current_q_index);
+    if (data.phase === 'question' && data.time_remaining > 0) {
+      startTimer(data.time_remaining);
+    }
+    document.getElementById('phase-badge').textContent = (data.phase || 'lobby').toUpperCase();
+    document.getElementById('players-badge').textContent = (data.players ? data.players.filter(p=>p.active).length : 0) + ' Players';
+  };
+</script>
+{% endblock %}

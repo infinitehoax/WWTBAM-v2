@@ -1,0 +1,580 @@
+{% extends "base.html" %}
+{% block title %}Projector Screen{% endblock %}
+{% block extra_head %}
+<style>
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: #050818;
+    background-image:
+      radial-gradient(ellipse at 20% 50%, rgba(30,58,138,0.4) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(184,134,11,0.15) 0%, transparent 50%);
+  }
+  #starfield { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+  .proj-layout {
+    position: relative; z-index: 1; height: 100vh;
+    display: grid; grid-template-columns: 1fr 240px;
+    grid-template-rows: 64px 1fr 50px;
+  }
+  /* Header */
+  .proj-header {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 28px;
+    background: linear-gradient(90deg, rgba(13,27,75,0.98), rgba(10,14,46,0.98));
+    border-bottom: 1px solid rgba(255,215,0,0.2);
+  }
+  .proj-logo { font-family: var(--font-display); font-size: 1.05rem; color: var(--gold);
+    text-shadow: 0 0 20px rgba(255,215,0,0.4); }
+  .proj-school { color: rgba(255,255,255,0.35); font-size: 0.72rem; letter-spacing: 2px; text-transform: uppercase; }
+  .proj-player-count { background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3);
+    color: var(--gold); padding: 5px 14px; border-radius: 20px; font-size: 0.82rem; font-weight: 600; }
+  /* Main */
+  .proj-main { padding: 18px 24px; display: flex; flex-direction: column; overflow: hidden; min-height: 0; }
+  /* Phase screens */
+  .phase-screen { display: none; flex-direction: column; height: 100%; }
+  .phase-screen.active { display: flex; }
+  /* LOBBY */
+  .lobby-screen { align-items: center; justify-content: center; text-align: center; }
+  .lobby-diamond {
+    width: 110px; height: 110px; margin: 0 auto 20px;
+    background: radial-gradient(circle, #FFD700 0%, #B8860B 55%, #0A0E2E 100%);
+    border-radius: 50%;
+    box-shadow: 0 0 60px rgba(255,215,0,0.5), 0 0 120px rgba(255,215,0,0.2);
+    display: flex; align-items: center; justify-content: center; font-size: 3.2rem;
+    animation: breathe 3s ease-in-out infinite;
+  }
+  @keyframes breathe {
+    0%,100%{transform:scale(1);box-shadow:0 0 60px rgba(255,215,0,0.5),0 0 120px rgba(255,215,0,0.2)}
+    50%{transform:scale(1.06);box-shadow:0 0 80px rgba(255,215,0,0.7),0 0 160px rgba(255,215,0,0.3)}
+  }
+  .lobby-title { font-family: var(--font-display); font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+    color: var(--gold); text-shadow: 0 0 40px rgba(255,215,0,0.5); margin-bottom: 8px; line-height: 1.2; }
+  .lobby-sub { color: rgba(255,255,255,0.4); font-size: 0.9rem; letter-spacing: 3px; text-transform: uppercase; }
+  .joining-names { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+    max-width: 700px; margin-top: 24px; }
+  .joining-chip {
+    background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.25);
+    border-radius: 20px; padding: 5px 14px; font-size: 0.82rem; color: rgba(255,255,255,0.8);
+    animation: chipIn 0.35s ease;
+  }
+  @keyframes chipIn { from{opacity:0;transform:scale(0.75)} to{opacity:1;transform:scale(1)} }
+  /* QUESTION */
+  .question-screen { justify-content: flex-start; }
+  .q-header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-shrink: 0; }
+  .q-cat-tag { background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.25);
+    border-radius: 20px; padding: 4px 14px; font-size: 0.75rem; color: rgba(255,215,0,0.7);
+    text-transform: uppercase; letter-spacing: 1.5px; }
+  /* Big timer circle */
+  .timer-circle-wrap { position: relative; width: 72px; height: 72px; }
+  .timer-circle-wrap svg { transform: rotate(-90deg); position: absolute; top:0; left:0; }
+  .tc-bg { fill: none; stroke: rgba(255,255,255,0.1); stroke-width: 5; }
+  .tc-fg { fill: none; stroke: var(--gold); stroke-width: 5; stroke-linecap: round;
+    stroke-dasharray: 195.0; stroke-dashoffset: 0; transition: stroke-dashoffset 1s linear, stroke 0.4s; }
+  .timer-num-big {
+    position: absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    font-size: 1.4rem; font-weight: 900; color: var(--gold); font-variant-numeric: tabular-nums;
+  }
+  /* Question text */
+  .proj-q-text {
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,215,0,0.12);
+    border-radius: 14px; padding: 18px 22px; margin-bottom: 14px; flex-shrink: 0;
+    font-size: clamp(1rem, 2vw, 1.35rem); line-height: 1.65; color: white;
+  }
+  .proj-q-img { max-height: 180px; width: auto; max-width: 100%; object-fit: contain;
+    border-radius: 10px; margin-bottom: 12px; display: block; }
+  /* Options */
+  .proj-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; flex-shrink: 0; }
+  .proj-opt {
+    display: flex; align-items: center; gap: 12px;
+    background: rgba(13,27,75,0.85); border: 2px solid rgba(255,215,0,0.2);
+    border-radius: 12px; padding: 13px 16px;
+    font-size: clamp(0.9rem, 1.6vw, 1.08rem); color: white; transition: all 0.35s;
+  }
+  .proj-opt.pulse-on { border-color: var(--gold); background: rgba(255,215,0,0.08);
+    box-shadow: 0 0 18px rgba(255,215,0,0.2); }
+  .proj-opt.correct { border-color: var(--correct); background: rgba(34,197,94,0.18);
+    animation: correctFlash 0.7s ease 2; }
+  .proj-opt.wrong { border-color: var(--wrong); background: rgba(239,68,68,0.15); opacity: 0.6; }
+  .proj-opt.eliminated { opacity: 0.12; }
+  @keyframes correctFlash {
+    0%,100%{background:rgba(34,197,94,0.18)} 50%{background:rgba(34,197,94,0.4)}
+  }
+  .proj-opt-letter {
+    width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+    background: rgba(255,215,0,0.15); border: 1px solid rgba(255,215,0,0.3);
+    color: var(--gold); font-weight: 700; font-size: 0.9rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .proj-opt.correct .proj-opt-letter { background: rgba(34,197,94,0.3); border-color: var(--correct); color: var(--correct); }
+  .proj-opt-img { max-height: 55px; object-fit: contain; border-radius: 6px; margin-left: auto; }
+  /* Answer distribution bars */
+  .answer-dist { display: none; grid-template-columns: repeat(4,1fr); gap: 8px; margin-top: 10px; flex-shrink: 0; }
+  .answer-dist.show { display: grid; }
+  .dist-col { text-align: center; }
+  .dist-bar-outer { height: 44px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 4px; }
+  .dist-bar-inner { width: 30px; border-radius: 4px 4px 0 0; transition: height 0.6s ease; min-height: 4px;
+    background: linear-gradient(to top, var(--gold-dark), var(--gold)); }
+  .dist-letter { font-size: 0.78rem; font-weight: 700; color: var(--gold); }
+  .dist-pct { font-size: 0.7rem; color: rgba(255,255,255,0.45); }
+  /* Prize sidebar */
+  .proj-sidebar {
+    background: rgba(5,8,24,0.9); border-left: 1px solid rgba(255,215,0,0.1);
+    padding: 14px 12px; overflow-y: auto; display: flex; flex-direction: column;
+  }
+  .sidebar-title { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 2px;
+    color: rgba(255,215,0,0.35); margin-bottom: 8px; text-align: center; }
+  .prize-rung {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 4px 8px; border-radius: 5px; margin-bottom: 2px;
+    font-size: 0.74rem; border: 1px solid transparent; transition: all 0.4s;
+    color: rgba(255,255,255,0.4);
+  }
+  .prize-rung .rung-n { color: rgba(255,255,255,0.25); font-size: 0.65rem; min-width: 18px; }
+  .prize-rung.current {
+    background: rgba(255,215,0,0.14); border-color: rgba(255,215,0,0.45);
+    color: var(--gold); font-weight: 700; font-size: 0.8rem;
+    box-shadow: 0 0 10px rgba(255,215,0,0.15);
+  }
+  .prize-rung.safe-haven { color: #FCA5A5; }
+  .prize-rung.passed { color: rgba(255,255,255,0.2); }
+  /* Footer */
+  .proj-footer {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; gap: 22px; padding: 0 28px;
+    background: rgba(5,8,24,0.95); border-top: 1px solid rgba(255,215,0,0.1);
+  }
+  .footer-stat { display: flex; align-items: center; gap: 8px; }
+  .footer-stat-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.28); }
+  .footer-stat-val { font-size: 0.88rem; font-weight: 700; color: var(--gold); }
+  /* Audience poll overlay */
+  .audience-poll-panel {
+    display: none; position: fixed; bottom: 70px; left: 50%; transform: translateX(-50%);
+    background: rgba(10,14,46,0.98); border: 1px solid rgba(255,215,0,0.45);
+    border-radius: 16px; padding: 18px 24px; min-width: 380px; z-index: 80;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 30px rgba(255,215,0,0.1);
+  }
+  .audience-poll-panel.show { display: block; animation: slideUp 0.4s ease; }
+  @keyframes slideUp { from{transform:translate(-50%,16px);opacity:0} to{transform:translate(-50%,0);opacity:1} }
+  .poll-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .poll-row-letter { width: 24px; color: var(--gold); font-weight: 700; font-size: 0.85rem; }
+  .poll-bar-outer { flex: 1; height: 26px; background: rgba(255,255,255,0.07); border-radius: 6px; overflow: hidden; }
+  .poll-bar-inner { height: 100%; background: linear-gradient(90deg, var(--gold-dark), var(--gold));
+    border-radius: 6px; transition: width 0.55s ease; min-width: 4px; }
+  .poll-pct-label { width: 38px; text-align: right; font-weight: 700; color: var(--gold); font-size: 0.85rem; }
+  /* Phone hint panel */
+  .phone-hint-panel {
+    display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    background: rgba(10,14,46,0.98); border: 2px solid rgba(255,215,0,0.5);
+    border-radius: 20px; padding: 34px 40px; text-align: center; z-index: 200;
+    min-width: 400px; box-shadow: 0 0 80px rgba(255,215,0,0.25);
+  }
+  .phone-hint-panel.show { display: block; animation: popIn 0.4s ease; }
+  @keyframes popIn { from{transform:translate(-50%,-50%) scale(0.82);opacity:0} to{transform:translate(-50%,-50%) scale(1);opacity:1} }
+  .hint-text-big { font-size: 1.25rem; color: white; margin: 14px 0 6px; line-height: 1.5; }
+  /* Leaderboard screen */
+  .lb-screen { overflow-y: auto; padding-bottom: 8px; }
+  .lb-screen-title { font-family: var(--font-display); font-size: clamp(1.4rem,2.5vw,2rem);
+    color: var(--gold); text-align: center; margin-bottom: 18px;
+    text-shadow: 0 0 30px rgba(255,215,0,0.4); flex-shrink: 0; }
+  .lb-row {
+    display: flex; align-items: center; gap: 14px;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 10px; padding: 12px 18px; margin-bottom: 8px;
+    animation: rowIn 0.5s ease both;
+  }
+  @keyframes rowIn { from{opacity:0;transform:translateX(-20px)} to{opacity:1;transform:translateX(0)} }
+  .lb-rank { width: 34px; text-align: center; font-size: 1rem; font-weight: 900; color: rgba(255,215,0,0.5); }
+  .lb-rank.gold { color: #FFD700; font-size: 1.3rem; }
+  .lb-rank.silver { color: #C0C0C0; font-size: 1.2rem; }
+  .lb-rank.bronze { color: #CD7F32; font-size: 1.1rem; }
+  .lb-name { flex: 1; font-size: 1rem; font-weight: 600; }
+  .lb-correct { color: rgba(34,197,94,0.7); font-size: 0.78rem; }
+  .lb-score { color: var(--gold); font-weight: 900; font-size: 1.1rem; min-width: 60px; text-align: right; }
+  /* Confetti */
+  .confetti-piece {
+    position: fixed; width: 9px; height: 9px; z-index: 500;
+    animation: confettiFall linear forwards; top: -20px; pointer-events: none;
+  }
+  @keyframes confettiFall { to { transform: translateY(105vh) rotate(720deg); opacity: 0; } }
+</style>
+{% endblock %}
+{% block body %}
+<canvas id="starfield"></canvas>
+<div class="proj-layout">
+  <!-- Header -->
+  <div class="proj-header">
+    <div>
+      <div class="proj-logo">Who Wants To Be A Millionaire?</div>
+      <div class="proj-school">Crystal Brooks College Edition</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;">
+      <span id="phase-indicator" style="color:rgba(255,255,255,0.35);font-size:0.72rem;text-transform:uppercase;letter-spacing:2px;">LOBBY</span>
+      <div class="proj-player-count"><span id="player-count">0</span> Players</div>
+    </div>
+  </div>
+
+  <!-- Main area -->
+  <div class="proj-main">
+    <!-- LOBBY -->
+    <div class="phase-screen lobby-screen active" id="phase-lobby">
+      <div class="lobby-diamond">💎</div>
+      <div class="lobby-title">Who Wants To Be<br>A Millionaire?</div>
+      <div class="lobby-sub">Crystal Brooks College · Game Night</div>
+      <div class="joining-names" id="joining-names">
+        <span style="color:rgba(255,255,255,0.22);font-style:italic;font-size:0.82rem;">Waiting for players...</span>
+      </div>
+    </div>
+
+    <!-- QUESTION -->
+    <div class="phase-screen question-screen" id="phase-question">
+      <div class="q-header-row">
+        <span class="q-cat-tag" id="proj-q-category">Category</span>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span id="proj-q-num" style="font-family:var(--font-display);font-size:0.95rem;color:rgba(255,255,255,0.35);">Q1</span>
+          <div class="timer-circle-wrap">
+            <svg width="72" height="72" viewBox="0 0 72 72">
+              <circle class="tc-bg" cx="36" cy="36" r="31"/>
+              <circle class="tc-fg" id="proj-tc-fg" cx="36" cy="36" r="31"/>
+            </svg>
+            <div class="timer-num-big" id="proj-timer-num">--</div>
+          </div>
+        </div>
+      </div>
+      <div id="proj-q-img-wrap"></div>
+      <div class="proj-q-text" id="proj-q-text">Waiting for question...</div>
+      <div class="proj-options" id="proj-options"></div>
+      <div class="answer-dist" id="answer-dist">
+        <div class="dist-col"><div class="dist-bar-outer"><div class="dist-bar-inner" id="db-A" style="height:4px;"></div></div><div class="dist-letter">A</div><div class="dist-pct" id="dp-A">0%</div></div>
+        <div class="dist-col"><div class="dist-bar-outer"><div class="dist-bar-inner" id="db-B" style="height:4px;background:linear-gradient(to top,rgba(234,179,8,0.8),rgba(253,224,71,0.9))"></div></div><div class="dist-letter">B</div><div class="dist-pct" id="dp-B">0%</div></div>
+        <div class="dist-col"><div class="dist-bar-outer"><div class="dist-bar-inner" id="db-C" style="height:4px;background:linear-gradient(to top,rgba(147,51,234,0.8),rgba(192,132,252,0.9))"></div></div><div class="dist-letter">C</div><div class="dist-pct" id="dp-C">0%</div></div>
+        <div class="dist-col"><div class="dist-bar-outer"><div class="dist-bar-inner" id="db-D" style="height:4px;background:linear-gradient(to top,rgba(234,88,12,0.8),rgba(253,186,116,0.9))"></div></div><div class="dist-letter">D</div><div class="dist-pct" id="dp-D">0%</div></div>
+      </div>
+    </div>
+
+    <!-- LEADERBOARD -->
+    <div class="phase-screen lb-screen" id="phase-leaderboard">
+      <div class="lb-screen-title">🏆 Leaderboard</div>
+      <div id="proj-lb-list"></div>
+    </div>
+  </div>
+
+  <!-- Prize Sidebar -->
+  <div class="proj-sidebar">
+    <div class="sidebar-title">Prize Ladder</div>
+    {% for p in prize_ladder|reverse %}
+    <div class="prize-rung {% if loop.revindex0 in safe_havens %}safe-haven{% endif %}"
+         id="rung-{{ loop.revindex - 1 }}">
+      <span class="rung-n">{{ loop.revindex }}</span>
+      <span>{{ p }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Footer -->
+  <div class="proj-footer">
+    <div class="footer-stat">
+      <span class="footer-stat-label">Phase</span>
+      <span class="footer-stat-val" id="footer-phase">Lobby</span>
+    </div>
+    <div class="footer-stat">
+      <span class="footer-stat-label">Players</span>
+      <span class="footer-stat-val" id="footer-players">0</span>
+    </div>
+    <div class="footer-stat">
+      <span class="footer-stat-label">Current Prize</span>
+      <span class="footer-stat-val" id="footer-prize">—</span>
+    </div>
+    <div style="margin-left:auto;color:rgba(255,255,255,0.22);font-size:0.7rem;letter-spacing:1px;">
+      Crystal Brooks College · WWTBAM
+    </div>
+  </div>
+</div>
+
+<!-- Audience Poll Panel -->
+<div class="audience-poll-panel" id="audience-poll-panel">
+  <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:2px;color:rgba(255,215,0,0.55);margin-bottom:12px;">📊 Ask the Audience</div>
+  <div id="audience-poll-bars">
+    <div class="poll-row"><span class="poll-row-letter">A</span><div class="poll-bar-outer"><div class="poll-bar-inner" id="pb-A" style="width:0%"></div></div><span class="poll-pct-label" id="pp-A">0%</span></div>
+    <div class="poll-row"><span class="poll-row-letter">B</span><div class="poll-bar-outer"><div class="poll-bar-inner" id="pb-B" style="width:0%"></div></div><span class="poll-pct-label" id="pp-B">0%</span></div>
+    <div class="poll-row"><span class="poll-row-letter">C</span><div class="poll-bar-outer"><div class="poll-bar-inner" id="pb-C" style="width:0%"></div></div><span class="poll-pct-label" id="pp-C">0%</span></div>
+    <div class="poll-row"><span class="poll-row-letter">D</span><div class="poll-bar-outer"><div class="poll-bar-inner" id="pb-D" style="width:0%"></div></div><span class="poll-pct-label" id="pp-D">0%</span></div>
+  </div>
+</div>
+
+<!-- Phone Hint Panel -->
+<div class="phone-hint-panel" id="phone-hint-panel">
+  <div style="font-size:3rem;margin-bottom:6px;">📞</div>
+  <div style="font-size:0.72rem;color:rgba(255,215,0,0.55);text-transform:uppercase;letter-spacing:2px;">Phone a Friend</div>
+  <div class="hint-text-big" id="hint-text-big">...</div>
+  <div style="color:rgba(255,255,255,0.3);font-size:0.78rem;margin-top:8px;">Hint from the host</div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/sockets/proj_sock.js"></script>
+<script>
+// ── Starfield ─────────────────────────────────────────────
+(function(){
+  const c = document.getElementById('starfield');
+  const ctx = c.getContext('2d');
+  function resize(){ c.width = window.innerWidth; c.height = window.innerHeight; }
+  resize(); window.addEventListener('resize', resize);
+  const stars = Array.from({length:160}, () => ({
+    x: Math.random(), y: Math.random(),
+    r: Math.random()*1.4+0.3,
+    a: Math.random(), da: (Math.random()-0.5)*0.005
+  }));
+  function draw(){
+    ctx.clearRect(0,0,c.width,c.height);
+    stars.forEach(s => {
+      s.a = Math.max(0.1, Math.min(1, s.a + s.da));
+      if (s.a <= 0.1 || s.a >= 1) s.da *= -1;
+      ctx.beginPath();
+      ctx.arc(s.x*c.width, s.y*c.height, s.r, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(255,255,255,${s.a})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ── Phase switching ───────────────────────────────────────
+function showPhase(name) {
+  document.querySelectorAll('.phase-screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById('phase-' + name);
+  if (el) el.classList.add('active');
+  document.getElementById('phase-indicator').textContent = name.toUpperCase();
+  document.getElementById('footer-phase').textContent = name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+// ── Prize ladder ──────────────────────────────────────────
+function updatePrizeLadder(idx) {
+  document.querySelectorAll('.prize-rung').forEach(r => {
+    const ri = parseInt(r.id.replace('rung-',''));
+    r.classList.remove('current','passed');
+    if (ri === idx) r.classList.add('current');
+    else if (ri < idx) r.classList.add('passed');
+  });
+  const rung = document.getElementById('rung-' + idx);
+  if (rung) {
+    document.getElementById('footer-prize').textContent = rung.querySelector('span:last-child').textContent;
+    rung.scrollIntoView({block:'nearest',behavior:'smooth'});
+  }
+}
+
+// ── Timer ─────────────────────────────────────────────────
+let timerInterval = null;
+const TC_CIRC = 195.0;
+function startTimer(seconds) {
+  clearInterval(timerInterval);
+  let rem = seconds;
+  const fg = document.getElementById('proj-tc-fg');
+  const num = document.getElementById('proj-timer-num');
+  function tick() {
+    num.textContent = rem;
+    const offset = TC_CIRC * (1 - rem / seconds);
+    fg.style.strokeDashoffset = offset;
+    fg.style.stroke = rem <= 5 ? 'var(--wrong)' : rem <= 10 ? '#FFA500' : 'var(--gold)';
+    if (rem <= 0) clearInterval(timerInterval);
+    rem = Math.max(0, rem - 1);
+  }
+  tick();
+  timerInterval = setInterval(tick, 1000);
+}
+
+// ── Render question ───────────────────────────────────────
+function renderQuestion(q) {
+  showPhase('question');
+  document.getElementById('answer-dist').classList.remove('show');
+  ['A','B','C','D'].forEach(l => {
+    const db = document.getElementById('db-'+l);
+    if (db) db.style.height = '4px';
+    const dp = document.getElementById('dp-'+l);
+    if (dp) dp.textContent = '0%';
+  });
+
+  document.getElementById('proj-q-category').textContent = (q.category || 'General').toUpperCase();
+  document.getElementById('proj-q-num').textContent = 'Q' + ((q.q_index || 0) + 1);
+  document.getElementById('proj-q-text').innerHTML = q.question_text || '';
+
+  // Question image
+  const imgWrap = document.getElementById('proj-q-img-wrap');
+  imgWrap.innerHTML = q.question_image
+    ? `<img src="${q.question_image}" class="proj-q-img" alt="question image">`
+    : '';
+
+  const opts = q.options || {};
+  const eliminated = q.eliminated_options || [];
+  document.getElementById('proj-options').innerHTML = ['A','B','C','D'].map(l => {
+    const opt = opts[l] || {};
+    const text = typeof opt === 'string' ? opt : (opt.text || '');
+    const img  = typeof opt === 'object' ? opt.image : null;
+    const isElim = eliminated.includes(l);
+    return `<div class="proj-opt${isElim ? ' eliminated' : ''}" id="proj-opt-${l}">
+      <span class="proj-opt-letter">${l}</span>
+      <span style="flex:1;">${text}</span>
+      ${img ? `<img src="${img}" class="proj-opt-img" alt="">` : ''}
+    </div>`;
+  }).join('');
+
+  if (q.time_limit) startTimer(q.time_limit);
+  if (q.q_index !== undefined) updatePrizeLadder(q.q_index);
+  if (window.MathJax) MathJax.typesetPromise([
+    document.getElementById('proj-q-text'),
+    document.getElementById('proj-options')
+  ]);
+}
+
+// ── Reveal answer ─────────────────────────────────────────
+function revealAnswer(correct, stats) {
+  clearInterval(timerInterval);
+  ['A','B','C','D'].forEach(l => {
+    const el = document.getElementById('proj-opt-' + l);
+    if (!el) return;
+    el.classList.remove('pulse-on');
+    if (l === correct) el.classList.add('correct');
+    else el.classList.add('wrong');
+  });
+  // Show distribution
+  if (stats) {
+    const total = Object.values(stats).reduce((a,b)=>a+b,0);
+    if (total > 0) {
+      document.getElementById('answer-dist').classList.add('show');
+      ['A','B','C','D'].forEach(l => {
+        const pct = Math.round((stats[l]||0)/total*100);
+        const px = Math.max(4, Math.round(pct/100*44));
+        document.getElementById('db-'+l).style.height = px+'px';
+        document.getElementById('dp-'+l).textContent = pct+'%';
+      });
+    }
+  }
+  // Million dollar confetti
+  if (correct && document.getElementById('proj-q-num').textContent === 'Q15') {
+    launchConfetti();
+  }
+}
+
+// ── Leaderboard ───────────────────────────────────────────
+function renderLeaderboard(lb) {
+  const medals = ['🥇','🥈','🥉'];
+  const rankClass = ['gold','silver','bronze'];
+  document.getElementById('proj-lb-list').innerHTML = lb.slice(0,10).map((p,i) => `
+    <div class="lb-row" style="animation-delay:${i*0.08}s">
+      <span class="lb-rank ${rankClass[i]||''}">${medals[i] || (i+1)}</span>
+      <span class="lb-name">${p.name}</span>
+      <span class="lb-correct">${p.correct||0}/${p.answered||0} correct</span>
+      <span class="lb-score">${p.score}</span>
+    </div>`).join('') || '<div style="text-align:center;color:rgba(255,255,255,0.3);padding:30px;">No scores yet.</div>';
+  showPhase('leaderboard');
+  launchConfetti();
+}
+
+// ── Audience poll ─────────────────────────────────────────
+function updateAudiencePoll(votes) {
+  const total = Object.values(votes).reduce((a,b)=>a+b,0);
+  document.getElementById('audience-poll-panel').classList.add('show');
+  ['A','B','C','D'].forEach(l => {
+    const pct = total > 0 ? Math.round((votes[l]||0)/total*100) : 0;
+    document.getElementById('pb-'+l).style.width = pct+'%';
+    document.getElementById('pp-'+l).textContent = pct+'%';
+  });
+}
+
+// ── 50:50 ─────────────────────────────────────────────────
+function apply5050(eliminated) {
+  eliminated.forEach(l => {
+    const el = document.getElementById('proj-opt-' + l);
+    if (el) el.classList.add('eliminated');
+  });
+}
+
+// ── Phone hint ────────────────────────────────────────────
+function showPhoneHint(hint) {
+  document.getElementById('hint-text-big').textContent = hint;
+  document.getElementById('phone-hint-panel').classList.add('show');
+  setTimeout(() => document.getElementById('phone-hint-panel').classList.remove('show'), 8000);
+}
+
+// ── Player tracking ───────────────────────────────────────
+const projPlayers = {};
+function addPlayer(sid, name) {
+  projPlayers[sid] = name;
+  const count = Object.keys(projPlayers).length;
+  document.getElementById('player-count').textContent = count;
+  document.getElementById('footer-players').textContent = count;
+  const names = document.getElementById('joining-names');
+  // Remove placeholder
+  const ph = names.querySelector('span[style]');
+  if (ph) ph.remove();
+  const chip = document.createElement('div');
+  chip.className = 'joining-chip';
+  chip.id = 'chip-' + sid;
+  chip.textContent = name;
+  names.appendChild(chip);
+}
+function removePlayer(sid) {
+  delete projPlayers[sid];
+  const count = Object.keys(projPlayers).length;
+  document.getElementById('player-count').textContent = count;
+  document.getElementById('footer-players').textContent = count;
+  const chip = document.getElementById('chip-' + sid);
+  if (chip) chip.remove();
+}
+
+// ── Confetti ──────────────────────────────────────────────
+function launchConfetti() {
+  const colors = ['#FFD700','#FFF176','#FFFFFF','#3B82F6','#22C55E','#EF4444','#A855F7'];
+  for (let i = 0; i < 90; i++) {
+    setTimeout(() => {
+      const el = document.createElement('div');
+      el.className = 'confetti-piece';
+      el.style.left = Math.random()*100 + 'vw';
+      el.style.background = colors[Math.floor(Math.random()*colors.length)];
+      el.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+      el.style.animationDuration = (2 + Math.random()*2) + 's';
+      el.style.width = el.style.height = (6 + Math.random()*8) + 'px';
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 4500);
+    }, i * 35);
+  }
+}
+
+// ── Audio ─────────────────────────────────────────────────
+const audioFiles = {
+  theme:    '/static/audio/theme.mp3',
+  suspense: '/static/audio/suspense.mp3',
+  correct:  '/static/audio/correct.mp3',
+  wrong:    '/static/audio/wrong.mp3',
+  lockin:   '/static/audio/lockin.mp3',
+  million:  '/static/audio/million.mp3',
+};
+let currentAudio = null;
+function playSound(name) {
+  if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; }
+  const src = audioFiles[name];
+  if (!src) return;
+  currentAudio = new Audio(src);
+  currentAudio.volume = 0.8;
+  currentAudio.play().catch(() => {});
+}
+
+// Expose for proj_sock.js
+window.proj = {
+  renderQuestion, revealAnswer, renderLeaderboard,
+  updateAudiencePoll, apply5050, showPhoneHint,
+  addPlayer, removePlayer, playSound, showPhase,
+  updatePrizeLadder,
+  applyStateSnapshot(data) {
+    if (data.players) {
+      data.players.filter(p=>p.active).forEach(p => addPlayer(p.sid, p.name));
+    }
+    if (data.phase === 'question' && data.current_question) {
+      renderQuestion(data.current_question);
+    } else if (data.phase === 'lobby') {
+      showPhase('lobby');
+    }
+    if (data.current_q_index >= 0) updatePrizeLadder(data.current_q_index);
+  }
+};
+</script>
+{% endblock %}

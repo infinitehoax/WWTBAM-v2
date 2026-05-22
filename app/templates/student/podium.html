@@ -1,0 +1,422 @@
+{% extends "base.html" %}
+{% block title %}Hot Seat{% endblock %}
+{% block extra_head %}
+<style>
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: radial-gradient(ellipse at 50% 0%, #1A2E6B 0%, #070B24 60%);
+    display: flex; flex-direction: column;
+  }
+  /* Header */
+  .podium-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 18px; background: rgba(13,27,75,0.8);
+    border-bottom: 1px solid rgba(255,215,0,0.15); flex-shrink: 0;
+  }
+  .player-tag { display: flex; align-items: center; gap: 10px; }
+  .player-avatar { width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold-dark), var(--gold));
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 0.9rem; color: var(--deep-blue); }
+  .player-info-name { font-weight: 700; font-size: 0.9rem; }
+  .player-info-score { color: var(--gold); font-size: 0.8rem; }
+  .prize-tag { background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3);
+    padding: 6px 14px; border-radius: 20px; color: var(--gold); font-weight: 700; font-size: 0.9rem; }
+  /* Timer */
+  .timer-wrap { text-align: center; flex-shrink: 0; padding: 0 18px; }
+  .timer-ring { width: 56px; height: 56px; position: relative; margin: 0 auto; }
+  .timer-ring svg { transform: rotate(-90deg); }
+  .timer-ring circle { fill: none; stroke-width: 4; }
+  .timer-ring .bg { stroke: rgba(255,255,255,0.1); }
+  .timer-ring .fg { stroke: var(--gold); stroke-linecap: round;
+    transition: stroke-dashoffset 1s linear, stroke 0.3s; }
+  .timer-num {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    font-size: 1rem; font-weight: 900; color: var(--gold);
+  }
+  /* Main content area */
+  .podium-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  /* Screens */
+  .screen { display: none; flex-direction: column; height: 100%; }
+  .screen.active { display: flex; }
+
+  /* WAITING screen */
+  .waiting-screen { align-items: center; justify-content: center; text-align: center; padding: 30px; }
+  .waiting-orb { font-size: 4rem; margin-bottom: 20px; animation: float 3s ease-in-out infinite; }
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+  .waiting-title { font-family: var(--font-display); font-size: 1.4rem; color: var(--gold); margin-bottom: 10px; }
+  .waiting-sub { color: rgba(255,255,255,0.45); font-size: 0.9rem; }
+  .pulse-dots span {
+    display: inline-block; width: 8px; height: 8px; background: var(--gold);
+    border-radius: 50%; margin: 0 3px;
+    animation: dotPulse 1.4s ease-in-out infinite;
+  }
+  .pulse-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .pulse-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes dotPulse { 0%,80%,100%{transform:scale(0.6);opacity:0.4} 40%{transform:scale(1);opacity:1} }
+
+  /* QUESTION screen */
+  .question-screen { padding: 12px 16px; overflow-y: auto; }
+  .q-category { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px;
+    color: rgba(255,215,0,0.5); margin-bottom: 8px; }
+  .q-text-box {
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,215,0,0.15);
+    border-radius: 14px; padding: 16px 18px; margin-bottom: 14px;
+    font-size: clamp(0.9rem, 2.5vw, 1.1rem); line-height: 1.6; color: white;
+  }
+  .q-image { width: 100%; max-height: 180px; object-fit: contain; border-radius: 10px;
+    margin-bottom: 12px; }
+  .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .option-btn {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(13,27,75,0.9); border: 1.5px solid rgba(255,215,0,0.25);
+    border-radius: 12px; padding: 12px 14px; cursor: pointer;
+    transition: all 0.2s; text-align: left;
+    font-family: var(--font-body); color: white;
+  }
+  .option-btn:hover:not(:disabled) { border-color: var(--gold); background: rgba(255,215,0,0.08);
+    transform: translateY(-1px); }
+  .option-btn:disabled { cursor: not-allowed; }
+  .option-btn.selected { border-color: var(--gold); background: rgba(255,215,0,0.15); }
+  .option-btn.correct { border-color: var(--correct); background: rgba(34,197,94,0.2);
+    animation: correctPop 0.4s ease; }
+  .option-btn.wrong { border-color: var(--wrong); background: rgba(239,68,68,0.2); }
+  .option-btn.eliminated { opacity: 0.2; pointer-events: none; }
+  @keyframes correctPop { 0%{transform:scale(1)} 50%{transform:scale(1.04)} 100%{transform:scale(1)} }
+  .opt-letter-badge {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: rgba(255,215,0,0.15); border: 1px solid rgba(255,215,0,0.3);
+    color: var(--gold); font-weight: 700; font-size: 0.8rem;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .opt-text { font-size: clamp(0.8rem, 2vw, 0.92rem); line-height: 1.4; flex: 1; }
+  .opt-image { width: 100%; max-height: 70px; object-fit: contain; border-radius: 6px; margin-top: 6px; }
+  .locked-badge {
+    display: none; background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.4);
+    border-radius: 10px; padding: 10px 14px; text-align: center;
+    color: #86EFAC; font-weight: 600; font-size: 0.85rem; margin-top: 12px;
+    animation: fadeIn 0.4s ease;
+  }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+  .locked-badge.show { display: block; }
+
+  /* Lifelines bar */
+  .lifelines-bar {
+    display: flex; gap: 10px; padding: 8px 16px;
+    border-top: 1px solid rgba(255,215,0,0.1); flex-shrink: 0;
+    background: rgba(7,11,36,0.8);
+  }
+  .lifeline-pill {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(255,215,0,0.08); border: 1px solid rgba(255,215,0,0.25);
+    border-radius: 20px; padding: 6px 14px; font-size: 0.8rem; font-weight: 600;
+    color: rgba(255,215,0,0.7);
+  }
+  .lifeline-pill.used { opacity: 0.3; text-decoration: line-through; }
+
+  /* RESULT screen */
+  .result-screen { align-items: center; justify-content: center; text-align: center; padding: 30px; }
+  .result-icon { font-size: 5rem; margin-bottom: 16px; }
+  .result-title { font-family: var(--font-display); font-size: 1.5rem; margin-bottom: 8px; }
+  .result-sub { color: rgba(255,255,255,0.5); }
+
+  /* Phone hint overlay */
+  .hint-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+    align-items: center; justify-content: center; z-index: 200; padding: 20px;
+  }
+  .hint-overlay.show { display: flex; }
+  .hint-box {
+    background: rgba(13,27,75,0.98); border: 1px solid rgba(255,215,0,0.4);
+    border-radius: 18px; padding: 30px; max-width: 380px; text-align: center;
+  }
+  .hint-icon { font-size: 3rem; margin-bottom: 14px; }
+  .hint-text-display { font-size: 1.1rem; color: white; margin-bottom: 20px; }
+  .dismiss-btn { background: rgba(255,215,0,0.15); border: 1px solid rgba(255,215,0,0.3);
+    color: var(--gold); border-radius: 8px; padding: 10px 24px; cursor: pointer;
+    font-family: var(--font-body); font-weight: 600; }
+
+  /* Audience poll */
+  .poll-wrap { padding: 10px 0; }
+  .poll-bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .poll-letter { width: 24px; color: var(--gold); font-weight: 700; font-size: 0.85rem; }
+  .poll-bar-outer { flex: 1; background: rgba(255,255,255,0.08); border-radius: 6px; height: 22px; overflow: hidden; }
+  .poll-bar-inner { height: 100%; background: linear-gradient(90deg, var(--gold-dark), var(--gold));
+    border-radius: 6px; transition: width 0.5s ease; min-width: 4px; }
+  .poll-pct { width: 36px; text-align: right; font-size: 0.8rem; color: var(--gold); font-weight: 700; }
+</style>
+{% endblock %}
+{% block body %}
+<!-- Podium Header -->
+<div class="podium-header">
+  <div class="player-tag">
+    <div class="player-avatar" id="player-initial">?</div>
+    <div>
+      <div class="player-info-name" id="header-name">Loading...</div>
+      <div class="player-info-score">Score: <span id="header-score">0</span></div>
+    </div>
+  </div>
+  <div class="timer-wrap">
+    <div class="timer-ring">
+      <svg width="56" height="56" viewBox="0 0 56 56">
+        <circle class="bg" cx="28" cy="28" r="22"/>
+        <circle class="fg" id="timer-fg" cx="28" cy="28" r="22"
+          stroke-dasharray="138.2" stroke-dashoffset="0"/>
+      </svg>
+      <div class="timer-num" id="timer-num">--</div>
+    </div>
+  </div>
+  <div class="prize-tag" id="prize-tag">₦0</div>
+</div>
+
+<!-- Podium Body -->
+<div class="podium-body">
+  <!-- WAITING screen -->
+  <div class="screen active" id="screen-waiting">
+    <div class="waiting-screen">
+      <div class="waiting-orb">💎</div>
+      <div class="waiting-title">You're in the Hot Seat!</div>
+      <div class="waiting-sub">Waiting for the host to start the game</div>
+      <div class="pulse-dots" style="margin-top:16px;">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- QUESTION screen -->
+  <div class="screen" id="screen-question">
+    <div class="question-screen" id="question-area">
+      <!-- Injected by JS -->
+    </div>
+    <div class="locked-badge" id="locked-badge">
+      🔒 Answer Locked In! Waiting for others...
+    </div>
+    <!-- Audience poll display -->
+    <div id="poll-area" style="display:none;padding:0 16px 10px;">
+      <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,215,0,0.5);margin-bottom:10px;">📊 Audience Says...</div>
+      <div class="poll-wrap" id="poll-bars"></div>
+    </div>
+  </div>
+
+  <!-- RESULT screen (per question) -->
+  <div class="screen" id="screen-result">
+    <div class="result-screen">
+      <div class="result-icon" id="result-icon">🤔</div>
+      <div class="result-title" id="result-title">...</div>
+      <div class="result-sub" id="result-sub"></div>
+    </div>
+  </div>
+
+  <!-- LEADERBOARD screen -->
+  <div class="screen" id="screen-leaderboard">
+    <div style="padding:20px;overflow-y:auto;height:100%;">
+      <div style="font-family:var(--font-display);font-size:1.1rem;color:var(--gold);text-align:center;margin-bottom:16px;">Leaderboard</div>
+      <div id="lb-content"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Lifelines bar -->
+<div class="lifelines-bar">
+  <div class="lifeline-pill" id="ll-5050">✂️ 50:50</div>
+  <div class="lifeline-pill" id="ll-audience">📊 Audience</div>
+  <div class="lifeline-pill" id="ll-phone">📞 Phone</div>
+</div>
+
+<!-- Phone hint overlay -->
+<div class="hint-overlay" id="hint-overlay">
+  <div class="hint-box">
+    <div class="hint-icon">📞</div>
+    <div style="color:rgba(255,215,0,0.7);font-size:0.8rem;margin-bottom:12px;text-transform:uppercase;letter-spacing:1px;">Phone a Friend</div>
+    <div class="hint-text-display" id="hint-display">...</div>
+    <button class="dismiss-btn" onclick="dismissHint()">Got it, thanks!</button>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/sockets/stud_sock.js"></script>
+<script>
+  // Init from sessionStorage
+  const playerName = sessionStorage.getItem('playerName') || 'Student';
+  document.getElementById('header-name').textContent = playerName;
+  const initial = playerName.charAt(0).toUpperCase();
+  document.getElementById('player-initial').textContent = initial;
+
+  let myAnswer = null;
+  let isLocked = false;
+  let timerInterval = null;
+  let timerTotal = 30;
+  const circumference = 138.2;
+
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const el = document.getElementById('screen-' + id);
+    if (el) el.classList.add('active');
+  }
+
+  function startTimer(seconds) {
+    clearInterval(timerInterval);
+    timerTotal = seconds;
+    let remaining = seconds;
+    const fg = document.getElementById('timer-fg');
+    const num = document.getElementById('timer-num');
+    function tick() {
+      num.textContent = remaining;
+      const offset = circumference * (1 - remaining / timerTotal);
+      fg.style.strokeDashoffset = offset;
+      fg.style.stroke = remaining <= 5 ? 'var(--wrong)' : remaining <= 10 ? '#FFA500' : 'var(--gold)';
+      if (remaining <= 0) clearInterval(timerInterval);
+      remaining = Math.max(0, remaining - 1);
+    }
+    tick();
+    timerInterval = setInterval(tick, 1000);
+  }
+
+  function renderQuestion(q, timeOverride) {
+    isLocked = false;
+    myAnswer = null;
+    document.getElementById('locked-badge').classList.remove('show');
+    document.getElementById('poll-area').style.display = 'none';
+    showScreen('question');
+
+    const opts = q.options || {};
+    const eliminated = q.eliminated_options || [];
+
+    let optHtml = ['A','B','C','D'].map(l => {
+      const opt = opts[l] || {};
+      const text = typeof opt === 'string' ? opt : (opt.text || '');
+      const img = typeof opt === 'object' ? opt.image : null;
+      const isElim = eliminated.includes(l);
+      return `<button class="option-btn${isElim ? ' eliminated' : ''}" id="opt-btn-${l}"
+        onclick="selectAnswer('${l}')" ${isElim ? 'disabled' : ''}>
+        <span class="opt-letter-badge">${l}</span>
+        <span class="opt-text">
+          ${text}
+          ${img ? `<br><img src="${img}" class="opt-image" alt="option ${l}">` : ''}
+        </span>
+      </button>`;
+    }).join('');
+
+    let qImgHtml = '';
+    if (q.question_image) {
+      qImgHtml = `<img src="${q.question_image}" class="q-image" alt="question image">`;
+    }
+
+    document.getElementById('question-area').innerHTML = `
+      <div class="q-category">${q.category || ''} &nbsp;·&nbsp; ${q.prize || ''}</div>
+      ${qImgHtml}
+      <div class="q-text-box">${q.question_text}</div>
+      <div class="options-grid">${optHtml}</div>
+    `;
+
+    // Use timeOverride (from server remaining time) or fall back to full time_limit
+    const timeToUse = (timeOverride !== undefined && timeOverride > 0) ? Math.round(timeOverride) : q.time_limit;
+    if (timeToUse) startTimer(timeToUse);
+    if (window.MathJax) MathJax.typesetPromise([document.getElementById('question-area')]);
+  }
+
+  function restoreAnswer(letter) {
+    if (!letter) return;
+    isLocked = true;
+    myAnswer = letter;
+    ['A','B','C','D'].forEach(l => {
+      const btn = document.getElementById('opt-btn-' + l);
+      if (!btn) return;
+      btn.disabled = true;
+      if (l === letter) btn.classList.add('selected');
+    });
+    document.getElementById('locked-badge').classList.add('show');
+  }
+
+  function selectAnswer(letter) {
+    if (isLocked) return;
+    isLocked = true;
+    myAnswer = letter;
+    // Visual
+    ['A','B','C','D'].forEach(l => {
+      const btn = document.getElementById('opt-btn-' + l);
+      if (!btn) return;
+      btn.disabled = true;
+      if (l === letter) btn.classList.add('selected');
+    });
+    document.getElementById('locked-badge').classList.add('show');
+    socket.emit('student_answer', {answer: letter});
+  }
+
+  function showAnswerResult(correctAnswer) {
+    clearInterval(timerInterval);
+    ['A','B','C','D'].forEach(l => {
+      const btn = document.getElementById('opt-btn-' + l);
+      if (!btn) return;
+      btn.disabled = true;
+      if (l === correctAnswer) btn.classList.add('correct');
+      else if (l === myAnswer && l !== correctAnswer) btn.classList.add('wrong');
+    });
+    // Show result after delay
+    setTimeout(() => {
+      const correct = myAnswer === correctAnswer;
+      document.getElementById('result-icon').textContent = correct ? '🎉' : '😔';
+      document.getElementById('result-title').textContent = correct ? 'Correct!' : 'Wrong!';
+      document.getElementById('result-title').style.color = correct ? 'var(--correct)' : 'var(--wrong)';
+      document.getElementById('result-sub').textContent = correct
+        ? 'Great job! Waiting for the next question...'
+        : `The correct answer was ${correctAnswer}.`;
+      showScreen('result');
+    }, 2200);
+  }
+
+  function showLeaderboard(lb) {
+    const html = lb.slice(0, 10).map((p, i) => `
+      <div style="display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.04);
+        border-radius:10px;padding:12px 16px;margin-bottom:8px;">
+        <span style="color:rgba(255,215,0,0.5);width:22px;font-size:0.8rem;">${i+1}</span>
+        <span style="flex:1;font-weight:600;">${p.name}</span>
+        <span style="color:var(--gold);font-weight:700;">${p.score}</span>
+      </div>`).join('');
+    document.getElementById('lb-content').innerHTML = html || '<div style="text-align:center;color:rgba(255,255,255,0.3);">No scores yet.</div>';
+    showScreen('leaderboard');
+  }
+
+  function dismissHint() {
+    document.getElementById('hint-overlay').classList.remove('show');
+  }
+
+  function updateAudiencePoll(votes) {
+    const total = Object.values(votes).reduce((a,b)=>a+b,0);
+    const pollArea = document.getElementById('poll-area');
+    if (total === 0) return;
+    pollArea.style.display = 'block';
+    const bars = document.getElementById('poll-bars');
+    bars.innerHTML = ['A','B','C','D'].map(l => {
+      const pct = total > 0 ? Math.round((votes[l]||0)/total*100) : 0;
+      return `<div class="poll-bar-row">
+        <span class="poll-letter">${l}</span>
+        <div class="poll-bar-outer"><div class="poll-bar-inner" style="width:${pct}%"></div></div>
+        <span class="poll-pct">${pct}%</span>
+      </div>`;
+    }).join('');
+  }
+
+  function apply5050(eliminated) {
+    eliminated.forEach(l => {
+      const btn = document.getElementById('opt-btn-' + l);
+      if (btn) { btn.classList.add('eliminated'); btn.disabled = true; }
+    });
+    document.getElementById('ll-5050').classList.add('used');
+  }
+
+  // Expose for socket handler
+  window.podium = {
+    renderQuestion, showAnswerResult, showLeaderboard,
+    updateAudiencePoll, apply5050, restoreAnswer,
+    showScreen,
+    setScore(s) { document.getElementById('header-score').textContent = s; },
+    setPrize(p) { if(p) document.getElementById('prize-tag').textContent = p; },
+    showHint(h) {
+      document.getElementById('hint-display').textContent = h;
+      document.getElementById('hint-overlay').classList.add('show');
+    },
+    setLifelineUsed(ll) { document.getElementById('ll-'+ll)?.classList.add('used'); }
+  };
+</script>
+{% endblock %}

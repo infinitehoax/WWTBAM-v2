@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Join the Game{% endblock %}
+{% block extra_head %}
+<style>
+  .join-wrap {
+    min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; padding: 20px;
+    background: radial-gradient(ellipse at 50% 30%, #1E3A8A 0%, #0A0E2E 65%);
+  }
+  .logo-area { text-align: center; margin-bottom: 36px; }
+  .show-title { font-family: var(--font-display); font-size: clamp(1.5rem, 5vw, 2.8rem);
+    color: var(--gold); text-shadow: 0 0 30px rgba(255,215,0,0.6), 0 0 60px rgba(255,215,0,0.3);
+    line-height: 1.15; }
+  .show-sub { color: rgba(255,255,255,0.5); font-size: 0.9rem; margin-top: 8px; letter-spacing: 2px; text-transform: uppercase; }
+  .join-card {
+    background: rgba(13,27,75,0.9); border: 1px solid rgba(255,215,0,0.25);
+    border-radius: 22px; padding: 40px; width: 100%; max-width: 420px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(255,215,0,0.1);
+  }
+  .join-card-title { font-size: 1rem; font-weight: 700; color: rgba(255,255,255,0.6);
+    text-align: center; margin-bottom: 24px; text-transform: uppercase; letter-spacing: 2px; }
+  .input-wrap { margin-bottom: 16px; }
+  .input-wrap label { display: block; color: rgba(255,215,0,0.6); font-size: 0.75rem;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .input-wrap input {
+    width: 100%; padding: 14px 16px; background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,215,0,0.2); border-radius: 11px; color: white;
+    font-family: var(--font-body); font-size: 1rem; outline: none;
+    transition: all 0.2s;
+  }
+  .input-wrap input:focus { border-color: var(--gold); background: rgba(255,215,0,0.06); }
+  .btn-join { width: 100%; padding: 15px; font-size: 1.05rem; border-radius: 12px;
+    margin-top: 8px; }
+  .orb { width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 20px;
+    background: radial-gradient(circle, #FFD700 0%, #B8860B 60%, #0A0E2E 100%);
+    box-shadow: 0 0 40px rgba(255,215,0,0.5), 0 0 80px rgba(255,215,0,0.2);
+    display: flex; align-items: center; justify-content: center; font-size: 2.2rem; }
+  .school-badge { margin-top: 20px; text-align: center; color: rgba(255,255,255,0.35);
+    font-size: 0.78rem; letter-spacing: 1px; }
+</style>
+{% endblock %}
+{% block body %}
+<div class="join-wrap">
+  <div class="logo-area">
+    <div class="orb">💎</div>
+    <div class="show-title">Who Wants To Be<br>A Millionaire?</div>
+    <div class="show-sub">Crystal Brooks College Edition</div>
+  </div>
+  <div class="join-card">
+    <div class="join-card-title">Enter Your Name to Play</div>
+    <div class="input-wrap">
+      <label>Your Name</label>
+      <input type="text" id="player-name" placeholder="e.g. Chidi Okafor" maxlength="50" autofocus
+        onkeydown="if(event.key==='Enter') joinGame()">
+    </div>
+    <div id="join-error" style="color:#FCA5A5;font-size:0.82rem;margin-bottom:12px;display:none;"></div>
+    <button class="btn btn-gold btn-join" onclick="joinGame()">Enter the Hot Seat 🎯</button>
+    <div class="school-badge">Crystal Brooks College · WWTBAM Game Night</div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  function joinGame() {
+    const name = document.getElementById('player-name').value.trim();
+    if (!name) {
+      const err = document.getElementById('join-error');
+      err.textContent = 'Please enter your name!';
+      err.style.display = 'block';
+      return;
+    }
+    sessionStorage.setItem('playerName', name);
+    window.location.href = '/play/podium';
+  }
+</script>
+{% endblock %}

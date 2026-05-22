@@ -86,12 +86,36 @@
     font-style: italic;
     padding: 40px 0;
   }
+
+  /* Friend Call Styles */
+  .friend-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.9);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .friend-card {
+    background: var(--mid-blue);
+    border: 2px solid var(--gold);
+    border-radius: 24px;
+    padding: 30px;
+    max-width: 500px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 0 40px rgba(255, 215, 0, 0.3);
+  }
+  .friend-icon { font-size: 3rem; margin-bottom: 20px; }
+  .friend-title { font-family: var(--font-display); color: var(--gold); margin-bottom: 15px; }
 </style>
 {% endblock %}
 
 {% block body %}
 <div class="audience-container">
-  <h1 class="font-display gold-text glow" style="font-size: 2rem; margin-bottom: 10px;">AUDIENCE POLL</h1>
+  <h1 class="font-display gold-text glow" style="font-size: 2rem; margin-bottom: 10px;">AUDIENCE</h1>
   <p style="color: rgba(255,255,255,0.6); margin-bottom: 30px;">Help the contestant choose the right answer!</p>
 
   <div id="poll-active" style="display: none;">
@@ -114,7 +138,26 @@
 
   <div id="poll-inactive" class="waiting-msg">
     <div style="font-size: 3rem; margin-bottom: 20px;">⌛</div>
-    Waiting for the contestant to use the "Ask the Audience" lifeline...
+    Waiting for a lifeline to be used...
+  </div>
+</div>
+
+<!-- Phone a Friend Overlay -->
+<div id="friend-overlay" class="friend-overlay">
+  <div class="friend-card">
+    <div class="friend-icon">📞</div>
+    <h2 class="friend-title">YOU'VE BEEN CALLED!</h2>
+    <p style="margin-bottom: 20px;"><span id="student-name-display" class="gold-text"></span> needs your help with this question:</p>
+
+    <div id="friend-q-text" class="q-text" style="font-size: 1.1rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;"></div>
+
+    <div class="vote-grid" style="margin-top: 20px;">
+        <button class="vote-btn" onclick="submitFriendAnswer('A')">A</button>
+        <button class="vote-btn" onclick="submitFriendAnswer('B')">B</button>
+        <button class="vote-btn" onclick="submitFriendAnswer('C')">C</button>
+        <button class="vote-btn" onclick="submitFriendAnswer('D')">D</button>
+    </div>
+    <p style="font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-top: 15px;">Pick the answer you think is correct!</p>
   </div>
 </div>
 {% endblock %}
@@ -129,7 +172,7 @@
     votedOption = option;
 
     // UI update
-    document.querySelectorAll('.vote-btn').forEach(btn => {
+    document.querySelectorAll('#vote-grid .vote-btn').forEach(btn => {
       btn.disabled = true;
       if (btn.textContent === option) btn.classList.add('voted');
     });
@@ -137,9 +180,15 @@
     socket.emit('audience_vote', { option });
   }
 
+  function submitFriendAnswer(option) {
+    socket.emit('friend_submit_answer', { option });
+    hideFriendCall();
+  }
+
   function updateBars(votes) {
     const total = Object.values(votes).reduce((a, b) => a + b, 0);
     const barsContainer = document.getElementById('poll-bars');
+    if (!barsContainer) return;
     barsContainer.innerHTML = ['A', 'B', 'C', 'D'].map(l => {
       const count = votes[l] || 0;
       const pct = total > 0 ? Math.round((count / total) * 100) : 0;
@@ -167,17 +216,29 @@
 
     if (!active) {
       votedOption = null;
-      document.querySelectorAll('.vote-btn').forEach(btn => {
+      document.querySelectorAll('#vote-grid .vote-btn').forEach(btn => {
         btn.disabled = false;
         btn.classList.remove('voted');
       });
     }
   }
 
+  function showFriendCall(question, name) {
+      document.getElementById('student-name-display').textContent = name;
+      document.getElementById('friend-q-text').textContent = question.question_text;
+      document.getElementById('friend-overlay').style.display = 'flex';
+  }
+
+  function hideFriendCall() {
+      document.getElementById('friend-overlay').style.display = 'none';
+  }
+
   // Socket handlers
   window.audienceUI = {
     updateBars,
-    showPoll
+    showPoll,
+    showFriendCall,
+    hideFriendCall
   };
 </script>
 {% endblock %}

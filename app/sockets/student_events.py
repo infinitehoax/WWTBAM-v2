@@ -4,7 +4,7 @@ Student Socket Events — Podium interactions
 from flask import request
 from flask_socketio import emit
 from ..engine.game_state import game_state
-from ..engine.lifelines import use_5050, use_audience_poll, submit_audience_vote
+from ..engine.lifelines import use_5050, use_audience_poll, submit_audience_vote, use_phone_a_friend
 
 
 def register_student_events(socketio):
@@ -114,10 +114,11 @@ def register_student_events(socketio):
             # The actual voting UI is handled via the audience_poll_started event broadcast
 
         elif ll_type == 'phone':
-            # Phone a friend notify admin to provide a hint
-            game_state.lifelines_used[sid].append('phone')
-            socketio.emit('admin_error', {'msg': f"Player {game_state.players[sid]['name']} is using Phone a Friend!"})
-            emit('lifeline_used', {'lifeline': 'phone'})
+            # Phone a Friend picks a random audience member
+            success = use_phone_a_friend(sid, socketio)
+            if success:
+                game_state.lifelines_used[sid].append('phone')
+                emit('lifeline_used', {'lifeline': 'phone'})
 
     @socketio.on('disconnect')
     def handle_disconnect(*args, **kwargs):

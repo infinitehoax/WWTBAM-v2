@@ -26,6 +26,8 @@ class GameState:
             self.eliminated_options = []   # For 50:50: options to hide ['B', 'C']
             self.audience_votes = {'A': 0, 'B': 0, 'C': 0, 'D': 0}
             self.audience_poll_active = False
+            self.audience_sids = set()
+            self.current_friend_sid = None
             self.players = {}              # {sid: {name, score, active, token, is_eliminated}}
             self.room_code = None
             self.sound_command = None      # Last sound triggered by admin
@@ -93,10 +95,31 @@ class GameState:
             if sid in self.players:
                 self.players[sid]['active'] = False
 
+    def add_audience(self, sid):
+        with self._lock:
+            self.audience_sids.add(sid)
+
+    def remove_audience(self, sid):
+        with self._lock:
+            if sid in self.audience_sids:
+                self.audience_sids.remove(sid)
+            if self.current_friend_sid == sid:
+                self.current_friend_sid = None
+
+    def pick_random_friend(self):
+        import random
+        with self._lock:
+            if not self.audience_sids:
+                return None
+            candidates = list(self.audience_sids)
+            self.current_friend_sid = random.choice(candidates)
+            return self.current_friend_sid
+
     def set_question(self, question_dict, index):
         with self._lock:
             self.current_question = question_dict
             self.current_q_index = index
+            self.current_friend_sid = None
             self.answers = {}
             self.eliminated_options = []
             self.audience_votes = {'A': 0, 'B': 0, 'C': 0, 'D': 0}
@@ -174,6 +197,7 @@ class GameState:
         with self._lock:
             self.phase = 'reveal'
             self.audience_poll_active = False
+            self.current_friend_sid = None
             # Reset last results for all players
             for p in self.players.values():
                 p["last_answer"] = None
@@ -260,6 +284,7 @@ class GameState:
                 'safe_havens': self.safe_havens,
                 'my_answer': my_answer,
                 'my_lifelines': my_lifelines,
+                'is_friend': sid == self.current_friend_sid if sid else False
             }
 
 

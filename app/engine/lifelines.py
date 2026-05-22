@@ -28,6 +28,28 @@ def submit_audience_vote(option, socketio):
     })
 
 
+def use_phone_a_friend(sid, socketio):
+    """Pick a random audience member and ask them for help."""
+    friend_sid = game_state.pick_random_friend()
+    if friend_sid:
+        # Notify the friend
+        socketio.emit('you_are_the_friend', {
+            'question': game_state.current_question,
+            'student_name': game_state.players.get(sid, {}).get('name', 'The contestant')
+        }, room=friend_sid)
+
+        # Notify the student
+        socketio.emit('friend_called', {'success': True}, room=sid)
+        return True
+    else:
+        # No audience members available
+        socketio.emit('friend_called', {
+            'success': False,
+            'msg': "No audience members available to call!"
+        }, room=sid)
+        return False
+
+
 def get_phone_hint(socketio):
     """Give a hint (admin writes it manually in dashboard and it's emitted)."""
     pass  # Handled manually via admin dashboard emit

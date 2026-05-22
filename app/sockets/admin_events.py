@@ -77,7 +77,8 @@ def register_admin_events(socketio):
     def handle_play_sound(data):
         """Trigger a sound on the projector."""
         sound = data.get('sound')
-        socketio.emit('play_sound', {'sound': sound})
+        loop = data.get('loop', False)
+        socketio.emit('play_sound', {'sound': sound, 'loop': loop})
 
     @socketio.on('admin_use_5050')
     def handle_5050(data):

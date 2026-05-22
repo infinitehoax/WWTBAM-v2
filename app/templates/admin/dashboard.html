@@ -242,6 +242,13 @@
       <button class="sound-btn" onclick="playSound('lockin')">🔒 Lock In</button>
       <button class="sound-btn" onclick="playSound('million')">💰 Million</button>
     </div>
+    <div style="display:flex; align-items:center; gap:10px; margin-top:10px;">
+      <span style="font-size:0.7rem; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:1px;">Loop Sounds</span>
+      <label class="switch">
+        <input type="checkbox" id="loop-sounds-toggle">
+        <span class="slider"></span>
+      </label>
+    </div>
 
     <div class="section-title">Lifelines</div>
     <div class="lifeline-grid">
@@ -422,8 +429,9 @@
   }
 
   function playSound(sound) {
-    socket.emit('admin_play_sound', {sound});
-    toast('▶ Playing: ' + sound);
+    const loop = document.getElementById('loop-sounds-toggle').checked;
+    socket.emit('admin_play_sound', {sound, loop});
+    toast('▶ Playing: ' + sound + (loop ? ' (looping)' : ''));
   }
 
   function use5050() {

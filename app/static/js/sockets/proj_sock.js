@@ -51,7 +51,7 @@ socket.on('show_leaderboard', (data) => {
 
 // Sound command
 socket.on('play_sound', (data) => {
-  if (window.proj) window.proj.playSound(data.sound);
+  if (window.proj) window.proj.playSound(data.sound, data.loop);
 });
 
 // 50:50

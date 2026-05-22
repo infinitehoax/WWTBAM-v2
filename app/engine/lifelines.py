@@ -17,7 +17,7 @@ def use_5050(sid, socketio):
 def use_audience_poll(socketio):
     """Start an audience vote on the big screen."""
     game_state.start_audience_poll()
-    socketio.emit('audience_poll_started', {}, broadcast=True)
+    socketio.emit('audience_poll_started', {'question': game_state.current_question})
 
 
 def submit_audience_vote(option, socketio):
@@ -25,7 +25,7 @@ def submit_audience_vote(option, socketio):
     game_state.vote_audience(option)
     socketio.emit('audience_votes_update', {
         'votes': game_state.audience_votes
-    }, broadcast=True)
+    })
 
 
 def get_phone_hint(socketio):

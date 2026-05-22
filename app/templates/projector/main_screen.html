@@ -634,12 +634,13 @@ const audioFiles = {
   million:  '/static/audio/million.mp3',
 };
 let currentAudio = null;
-function playSound(name) {
+function playSound(name, loop=false) {
   if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; }
   const src = audioFiles[name];
   if (!src) return;
   currentAudio = new Audio(src);
   currentAudio.volume = 0.8;
+  currentAudio.loop = loop;
   currentAudio.play().catch(() => {});
 }
 

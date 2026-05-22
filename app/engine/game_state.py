@@ -4,6 +4,7 @@ Tracks all active game state in memory. Survives socket disconnections.
 """
 import threading
 import time
+import uuid
 from datetime import datetime
 
 
@@ -25,25 +26,32 @@ class GameState:
             self.eliminated_options = []   # For 50:50: options to hide ['B', 'C']
             self.audience_votes = {'A': 0, 'B': 0, 'C': 0, 'D': 0}
             self.audience_poll_active = False
-            self.players = {}              # {sid: {name, score, active}}
+            self.players = {}              # {sid: {name, score, active, token, is_eliminated}}
             self.room_code = None
             self.sound_command = None      # Last sound triggered by admin
             self.prize_ladder = [
-                '₦1,000', '₦2,000', '₦3,000', '₦5,000', '₦7,500',
-                '₦10,000', '₦15,000', '₦20,000', '₦30,000', '₦50,000',
-                '₦75,000', '₦150,000', '₦300,000', '₦500,000', '₦1,000,000'
+                1000, 2000, 3000, 5000, 7500,
+                10000, 15000, 20000, 30000, 50000,
+                75000, 150000, 300000, 500000, 1000000
             ]
             self.current_prize_index = -1
             self.safe_havens = [4, 9]  # Indices 4 (₦10k) and 9 (₦50k)
 
-    def add_player(self, sid, name):
+    def add_player(self, sid, name, token=None):
         with self._lock:
-            # Check if player name already existed
+            # Check if player with this token already exists
             existing_sid = None
-            for old_sid, p in self.players.items():
-                if p['name'] == name:
-                    existing_sid = old_sid
-                    break
+            if token:
+                for old_sid, p in self.players.items():
+                    if p.get('token') == token:
+                        existing_sid = old_sid
+                        break
+            else:
+                # Check by name if no token provided (first time join)
+                for old_sid, p in self.players.items():
+                    if p['name'] == name and not p.get('active'):
+                        existing_sid = old_sid
+                        break
 
             if existing_sid is not None:
                 # Reconnect: transfer state
@@ -61,18 +69,24 @@ class GameState:
                 # Transfer answers
                 if existing_sid in self.answers:
                     self.answers[sid] = self.answers.pop(existing_sid)
+
+                return player_data['token']
             else:
                 # New player
+                new_token = str(uuid.uuid4())
                 self.players[sid] = {
                     'name': name,
                     'score': 0,
                     'correct': 0,
                     'answered': 0,
                     'active': True,
+                    'is_eliminated': False,
                     'sid': sid,
+                    'token': new_token,
                     'joined_at': datetime.utcnow().isoformat()
                 }
                 self.lifelines_used[sid] = []
+                return new_token
 
     def remove_player(self, sid):
         with self._lock:
@@ -87,16 +101,34 @@ class GameState:
             self.eliminated_options = []
             self.audience_votes = {'A': 0, 'B': 0, 'C': 0, 'D': 0}
             self.audience_poll_active = False
-            self.timer_started_at = time.time()
+            self.timer_started_at = None  # Don't start timer yet
             self.time_limit = question_dict.get('time_limit', 30)
             self.phase = 'question'
             if index < len(self.prize_ladder):
                 self.current_prize_index = index
 
+    def start_timer(self):
+        with self._lock:
+            if self.phase == 'question' and self.timer_started_at is None:
+                self.timer_started_at = time.time()
+                return True
+        return False
+
     def record_answer(self, sid, answer):
         with self._lock:
+            # Cannot answer if timer hasn't started or already expired
+            if self.timer_started_at is None:
+                return False
+
+            elapsed = time.time() - self.timer_started_at
+            if elapsed > self.time_limit:
+                return False
+
+            # Eliminated players cannot answer
+            if self.players.get(sid, {}).get('is_eliminated'):
+                return False
+
             if sid not in self.answers:
-                elapsed = time.time() - (self.timer_started_at or time.time())
                 self.answers[sid] = {
                     'answer': answer,
                     'locked': True,
@@ -107,7 +139,7 @@ class GameState:
 
     def get_time_remaining(self):
         if self.timer_started_at is None:
-            return 0
+            return self.time_limit
         elapsed = time.time() - self.timer_started_at
         return max(0, self.time_limit - elapsed)
 
@@ -140,29 +172,57 @@ class GameState:
 
     def reveal_answer(self, correct_answer):
         with self._lock:
-            self.phase = "reveal"
+            self.phase = 'reveal'
             # Reset last results for all players
             for p in self.players.values():
                 p["last_answer"] = None
                 p["is_correct_last"] = False
 
-            # Update scores and record results
-            for sid, data in self.answers.items():
-                if sid in self.players:
-                    ans = data["answer"]
-                    self.players[sid]["last_answer"] = ans
-                    self.players[sid]["answered"] += 1
-                    if ans == correct_answer:
-                        pts = (self.current_q_index + 1) * 100
-                        self.players[sid]["score"] += pts
-                        self.players[sid]["correct"] += 1
-                        self.players[sid]["is_correct_last"] = True
+            # Update scores for players who were not already eliminated
+            for sid, p in self.players.items():
+                if not p.get('active') or p.get('is_eliminated'):
+                    continue
+
+                # Check if they answered this question
+                ans_data = self.answers.get(sid)
+                if ans_data:
+                    p['last_answer'] = ans_data['answer']
+                    p['answered'] += 1
+                    if ans_data['answer'] == correct_answer:
+                        # Correct: set score to current prize level
+                        p['score'] = self.prize_ladder[self.current_q_index]
+                        p['correct'] += 1
+                        p['is_correct_last'] = True
                     else:
-                        self.players[sid]["is_correct_last"] = False
+                        # Wrong: Eliminated! Drop to safe haven
+                        p['is_eliminated'] = True
+                        p['score'] = self._get_safe_haven_value(self.current_q_index)
+                        p['is_correct_last'] = False
+                else:
+                    # Didn't answer: In WWTBAM this is like getting it wrong if the timer is up
+                    p['is_eliminated'] = True
+                    p['score'] = self._get_safe_haven_value(self.current_q_index)
+                    p['is_correct_last'] = False
+
+    def _get_safe_haven_value(self, q_index):
+        if q_index < 4:
+            return 0
+        elif q_index < 9:
+            return self.prize_ladder[4]
+        else:
+            return self.prize_ladder[9]
 
     def get_leaderboard(self):
         players = [p for p in self.players.values() if p.get('active')]
-        return sorted(players, key=lambda x: x['score'], reverse=True)
+        # Sort by score primarily, then by number of correct answers
+        sorted_players = sorted(players, key=lambda x: (x['score'], x['correct']), reverse=True)
+        # Add formatted score to each player dict for the UI
+        for p in sorted_players:
+            p['score_formatted'] = self.format_naira(p['score'])
+        return sorted_players
+
+    def format_naira(self, amount):
+        return f"₦{amount:,}"
 
     def get_snapshot(self, sid=None):
         """Full state snapshot for reconnecting clients."""
@@ -175,17 +235,27 @@ class GameState:
                 if sid in self.lifelines_used:
                     my_lifelines = self.lifelines_used[sid]
 
+            prize_ladder_formatted = [self.format_naira(p) for p in self.prize_ladder]
+
+            # Prepare players with formatted scores
+            player_list = []
+            for p in self.players.values():
+                pd = p.copy()
+                pd['score_formatted'] = self.format_naira(p['score'])
+                player_list.append(pd)
+
             return {
                 'phase': self.phase,
                 'current_question': self.current_question,
                 'current_q_index': self.current_q_index,
                 'time_remaining': self.get_time_remaining(),
+                'timer_started': self.timer_started_at is not None,
                 'eliminated_options': self.eliminated_options,
                 'audience_poll_active': self.audience_poll_active,
                 'audience_votes': self.audience_votes if self.audience_poll_active else None,
-                'players': list(self.players.values()),
-                'current_prize': self.prize_ladder[self.current_prize_index] if self.current_prize_index >= 0 else None,
-                'prize_ladder': self.prize_ladder,
+                'players': player_list,
+                'current_prize': self.format_naira(self.prize_ladder[self.current_prize_index]) if self.current_prize_index >= 0 else None,
+                'prize_ladder': prize_ladder_formatted,
                 'safe_havens': self.safe_havens,
                 'my_answer': my_answer,
                 'my_lifelines': my_lifelines,

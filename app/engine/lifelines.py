@@ -11,10 +11,6 @@ def use_5050(sid, socketio):
         return False
     correct = q.get('correct_answer')
     eliminated = game_state.apply_5050(correct)
-    socketio.emit('lifeline_5050', {
-        'eliminated': eliminated,
-        'for_sid': sid
-    }, broadcast=True)
     return eliminated
 
 

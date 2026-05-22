@@ -32,10 +32,12 @@
     transition: stroke-dashoffset 1s linear, stroke 0.3s; }
   .timer-num {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
-    font-size: 1rem; font-weight: 900; color: var(--gold);
+    font-size: 1.1rem; font-weight: 900; color: var(--gold);
+    font-family: 'Courier New', Courier, monospace;
+    font-variant-numeric: tabular-nums;
   }
   /* Main content area */
-  .podium-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .podium-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
   /* Screens */
   .screen { display: none; flex-direction: column; height: 100%; }
   .screen.active { display: flex; }
@@ -63,62 +65,78 @@
     background: rgba(255,255,255,0.04); border: 1px solid rgba(255,215,0,0.15);
     border-radius: 14px; padding: 16px 18px; margin-bottom: 14px;
     font-size: clamp(0.9rem, 2.5vw, 1.1rem); line-height: 1.6; color: white;
+    min-height: 100px;
   }
   .q-image { width: 100%; max-height: 180px; object-fit: contain; border-radius: 10px;
     margin-bottom: 12px; }
-  .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
   .option-btn {
     display: flex; align-items: center; gap: 10px;
-    background: rgba(13,27,75,0.9); border: 1.5px solid rgba(255,215,0,0.25);
-    border-radius: 12px; padding: 12px 14px; cursor: pointer;
+    background: rgba(13,27,75,0.9); border: 2px solid rgba(255,215,0,0.25);
+    border-radius: 12px; padding: 18px 14px; cursor: pointer;
     transition: all 0.2s; text-align: left;
     font-family: var(--font-body); color: white;
+    min-height: 70px;
   }
   .option-btn:hover:not(:disabled) { border-color: var(--gold); background: rgba(255,215,0,0.08);
-    transform: translateY(-1px); }
+    transform: translateY(-2px); }
   .option-btn:disabled { cursor: not-allowed; }
-  .option-btn.selected { border-color: var(--gold); background: rgba(255,215,0,0.15); }
-  .option-btn.correct { border-color: var(--correct); background: rgba(34,197,94,0.2);
+  .option-btn.selected { border-color: var(--gold); background: rgba(255,215,0,0.2); }
+  .option-btn.correct { border-color: var(--correct); background: rgba(34,197,94,0.3);
     animation: correctPop 0.4s ease; }
-  .option-btn.wrong { border-color: var(--wrong); background: rgba(239,68,68,0.2); }
-  .option-btn.eliminated { opacity: 0.2; pointer-events: none; }
+  .option-btn.wrong { border-color: var(--wrong); background: rgba(239,68,68,0.3); }
+  .option-btn.eliminated { visibility: hidden; pointer-events: none; }
   @keyframes correctPop { 0%{transform:scale(1)} 50%{transform:scale(1.04)} 100%{transform:scale(1)} }
   .opt-letter-badge {
-    width: 28px; height: 28px; border-radius: 50%;
+    width: 30px; height: 30px; border-radius: 50%;
     background: rgba(255,215,0,0.15); border: 1px solid rgba(255,215,0,0.3);
-    color: var(--gold); font-weight: 700; font-size: 0.8rem;
+    color: var(--gold); font-weight: 700; font-size: 0.85rem;
     display: flex; align-items: center; justify-content: center; flex-shrink: 0;
   }
-  .opt-text { font-size: clamp(0.8rem, 2vw, 0.92rem); line-height: 1.4; flex: 1; }
-  .opt-image { width: 100%; max-height: 70px; object-fit: contain; border-radius: 6px; margin-top: 6px; }
+  .opt-text { font-size: clamp(0.85rem, 2vw, 1rem); line-height: 1.4; flex: 1; }
+
   .locked-badge {
-    display: none; background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.4);
-    border-radius: 10px; padding: 10px 14px; text-align: center;
-    color: #86EFAC; font-weight: 600; font-size: 0.85rem; margin-top: 12px;
-    animation: fadeIn 0.4s ease;
+    display: none; position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: #15803d; border: 1px solid #4ade80;
+    border-radius: 30px; padding: 10px 24px; text-align: center;
+    color: white; font-weight: 700; font-size: 0.9rem;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5); z-index: 50;
+    white-space: nowrap;
   }
-  @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
-  .locked-badge.show { display: block; }
+  .locked-badge.show { display: block; animation: slideUp 0.4s ease; }
+  @keyframes slideUp { from{opacity:0;transform:translate(-50%,20px)} to{opacity:1;transform:translate(-50%,0)} }
 
   /* Lifelines bar */
   .lifelines-bar {
-    display: flex; gap: 10px; padding: 8px 16px;
+    display: flex; gap: 10px; padding: 12px 16px;
     border-top: 1px solid rgba(255,215,0,0.1); flex-shrink: 0;
-    background: rgba(7,11,36,0.8);
+    background: rgba(7,11,36,0.9);
   }
   .lifeline-pill {
-    display: flex; align-items: center; gap: 6px;
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
     background: rgba(255,215,0,0.08); border: 1px solid rgba(255,215,0,0.25);
-    border-radius: 20px; padding: 6px 14px; font-size: 0.8rem; font-weight: 600;
-    color: rgba(255,215,0,0.7);
+    border-radius: 12px; padding: 8px 4px; font-size: 0.7rem; font-weight: 600;
+    color: rgba(255,215,0,0.7); cursor: pointer; transition: all 0.2s;
   }
-  .lifeline-pill.used { opacity: 0.3; text-decoration: line-through; }
+  .lifeline-pill:active { transform: scale(0.95); background: rgba(255,215,0,0.15); }
+  .lifeline-pill.used { opacity: 0.2; pointer-events: none; filter: grayscale(1); }
+  .ll-icon-lg { font-size: 1.4rem; }
 
   /* RESULT screen */
   .result-screen { align-items: center; justify-content: center; text-align: center; padding: 30px; }
   .result-icon { font-size: 5rem; margin-bottom: 16px; }
   .result-title { font-family: var(--font-display); font-size: 1.5rem; margin-bottom: 8px; }
   .result-sub { color: rgba(255,255,255,0.5); }
+
+  /* Voting UI */
+  .vote-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
+  .vote-btn {
+    background: rgba(255,215,0,0.1); border: 1px solid rgba(255,215,0,0.3);
+    border-radius: 8px; padding: 10px; color: var(--gold); font-weight: 700;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .vote-btn:active { background: var(--gold); color: var(--deep-blue); }
+  .vote-btn.voted { background: var(--gold); color: var(--deep-blue); }
 
   /* Phone hint overlay */
   .hint-overlay {
@@ -135,6 +153,21 @@
   .dismiss-btn { background: rgba(255,215,0,0.15); border: 1px solid rgba(255,215,0,0.3);
     color: var(--gold); border-radius: 8px; padding: 10px 24px; cursor: pointer;
     font-family: var(--font-body); font-weight: 600; }
+
+  /* Confirmation */
+  .confirm-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+    align-items: center; justify-content: center; z-index: 300; padding: 20px;
+  }
+  .confirm-overlay.show { display: flex; }
+  .confirm-box {
+    background: #0D1B4B; border: 1.5px solid var(--gold); border-radius: 20px;
+    padding: 24px; width: 100%; max-width: 320px; text-align: center;
+  }
+  .confirm-title { font-size: 1.2rem; font-weight: 700; margin-bottom: 20px; color: white; }
+  .confirm-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .btn-no { background: rgba(255,255,255,0.1); color: white; border: none; padding: 12px; border-radius: 10px; font-weight: 600; cursor: pointer; }
+  .btn-yes { background: var(--gold); color: var(--deep-blue); border: none; padding: 12px; border-radius: 10px; font-weight: 700; cursor: pointer; }
 
   /* Audience poll */
   .poll-wrap { padding: 10px 0; }
@@ -153,7 +186,7 @@
     <div class="player-avatar" id="player-initial">?</div>
     <div>
       <div class="player-info-name" id="header-name">Loading...</div>
-      <div class="player-info-score">Score: <span id="header-score">0</span></div>
+      <div class="player-info-score">Score: <span id="header-score">₦0</span></div>
     </div>
   </div>
   <div class="timer-wrap">
@@ -176,7 +209,7 @@
     <div class="waiting-screen">
       <div class="waiting-orb">💎</div>
       <div class="waiting-title">You're in the Hot Seat!</div>
-      <div class="waiting-sub">Waiting for the host to start the game</div>
+      <div class="waiting-sub" id="waiting-msg">Waiting for the host to start the game</div>
       <div class="pulse-dots" style="margin-top:16px;">
         <span></span><span></span><span></span>
       </div>
@@ -188,14 +221,21 @@
     <div class="question-screen" id="question-area">
       <!-- Injected by JS -->
     </div>
-    <div class="locked-badge" id="locked-badge">
-      🔒 Answer Locked In! Waiting for others...
-    </div>
-    <!-- Audience poll display -->
+    <!-- Audience poll display & Voting UI -->
     <div id="poll-area" style="display:none;padding:0 16px 10px;">
-      <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,215,0,0.5);margin-bottom:10px;">📊 Audience Says...</div>
+      <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,215,0,0.5);margin-bottom:10px;">📊 Audience Voting</div>
       <div class="poll-wrap" id="poll-bars"></div>
+      <div class="vote-grid" id="vote-grid">
+        <button class="vote-btn" onclick="submitVote('A')">A</button>
+        <button class="vote-btn" onclick="submitVote('B')">B</button>
+        <button class="vote-btn" onclick="submitVote('C')">C</button>
+        <button class="vote-btn" onclick="submitVote('D')">D</button>
+      </div>
     </div>
+  </div>
+
+  <div class="locked-badge" id="locked-badge">
+    🔒 Answer Locked In! Waiting for others...
   </div>
 
   <!-- RESULT screen (per question) -->
@@ -218,9 +258,18 @@
 
 <!-- Lifelines bar -->
 <div class="lifelines-bar">
-  <div class="lifeline-pill" id="ll-5050">✂️ 50:50</div>
-  <div class="lifeline-pill" id="ll-audience">📊 Audience</div>
-  <div class="lifeline-pill" id="ll-phone">📞 Phone</div>
+  <div class="lifeline-pill" id="ll-5050" onclick="useLifeline('5050')">
+    <span class="ll-icon-lg">✂️</span>
+    <span>50:50</span>
+  </div>
+  <div class="lifeline-pill" id="ll-audience" onclick="useLifeline('audience')">
+    <span class="ll-icon-lg">📊</span>
+    <span>Audience</span>
+  </div>
+  <div class="lifeline-pill" id="ll-phone" onclick="useLifeline('phone')">
+    <span class="ll-icon-lg">📞</span>
+    <span>Phone</span>
+  </div>
 </div>
 
 <!-- Phone hint overlay -->
@@ -230,6 +279,17 @@
     <div style="color:rgba(255,215,0,0.7);font-size:0.8rem;margin-bottom:12px;text-transform:uppercase;letter-spacing:1px;">Phone a Friend</div>
     <div class="hint-text-display" id="hint-display">...</div>
     <button class="dismiss-btn" onclick="dismissHint()">Got it, thanks!</button>
+  </div>
+</div>
+
+<!-- Confirmation overlay -->
+<div class="confirm-overlay" id="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-title">Final Answer?</div>
+    <div class="confirm-btns">
+      <button class="btn-no" onclick="cancelSelection()">NO</button>
+      <button class="btn-yes" onclick="confirmSelection()">YES</button>
+    </div>
   </div>
 </div>
 {% endblock %}
@@ -243,9 +303,12 @@
   document.getElementById('player-initial').textContent = initial;
 
   let myAnswer = null;
+  let pendingAnswer = null;
   let isLocked = false;
+  let isEliminated = false;
   let timerInterval = null;
   let timerTotal = 30;
+  let currentQData = null;
   const circumference = 138.2;
 
   function showScreen(id) {
@@ -261,22 +324,33 @@
     const fg = document.getElementById('timer-fg');
     const num = document.getElementById('timer-num');
     function tick() {
-      num.textContent = remaining;
+      num.textContent = Math.ceil(remaining);
       const offset = circumference * (1 - remaining / timerTotal);
       fg.style.strokeDashoffset = offset;
       fg.style.stroke = remaining <= 5 ? 'var(--wrong)' : remaining <= 10 ? '#FFA500' : 'var(--gold)';
-      if (remaining <= 0) clearInterval(timerInterval);
-      remaining = Math.max(0, remaining - 1);
+      if (remaining <= 0) {
+        clearInterval(timerInterval);
+      }
+      remaining = Math.max(0, remaining - 0.1);
     }
     tick();
-    timerInterval = setInterval(tick, 1000);
+    timerInterval = setInterval(tick, 100);
   }
 
-  function renderQuestion(q, timeOverride) {
+  function renderQuestion(q, timeOverride, timerStarted) {
+    currentQData = q;
     isLocked = false;
     myAnswer = null;
+    pendingAnswer = null;
     document.getElementById('locked-badge').classList.remove('show');
     document.getElementById('poll-area').style.display = 'none';
+
+    if (isEliminated) {
+        document.getElementById('waiting-msg').textContent = "You've been eliminated, but you can still watch!";
+        showScreen('waiting');
+        return;
+    }
+
     showScreen('question');
 
     const opts = q.options || {};
@@ -309,9 +383,13 @@
       <div class="options-grid">${optHtml}</div>
     `;
 
-    // Use timeOverride (from server remaining time) or fall back to full time_limit
-    const timeToUse = (timeOverride !== undefined && timeOverride > 0) ? Math.round(timeOverride) : q.time_limit;
-    if (timeToUse) startTimer(timeToUse);
+    if (timerStarted) {
+        const timeToUse = (timeOverride !== undefined && timeOverride > 0) ? timeOverride : q.time_limit;
+        startTimer(timeToUse);
+    } else {
+        document.getElementById('timer-num').textContent = q.time_limit;
+    }
+
     if (window.MathJax) MathJax.typesetPromise([document.getElementById('question-area')]);
   }
 
@@ -329,22 +407,37 @@
   }
 
   function selectAnswer(letter) {
-    if (isLocked) return;
+    if (isLocked || isEliminated) return;
+    pendingAnswer = letter;
+    document.getElementById('confirm-overlay').classList.add('show');
+  }
+
+  function cancelSelection() {
+    pendingAnswer = null;
+    document.getElementById('confirm-overlay').classList.remove('show');
+  }
+
+  function confirmSelection() {
+    if (!pendingAnswer) return;
+    myAnswer = pendingAnswer;
     isLocked = true;
-    myAnswer = letter;
-    // Visual
+    document.getElementById('confirm-overlay').classList.remove('show');
+
+    // Visual update
     ['A','B','C','D'].forEach(l => {
       const btn = document.getElementById('opt-btn-' + l);
       if (!btn) return;
       btn.disabled = true;
-      if (l === letter) btn.classList.add('selected');
+      if (l === myAnswer) btn.classList.add('selected');
     });
     document.getElementById('locked-badge').classList.add('show');
-    socket.emit('student_answer', {answer: letter});
+    socket.emit('student_answer', {answer: myAnswer});
   }
 
   function showAnswerResult(correctAnswer) {
     clearInterval(timerInterval);
+    if (isEliminated) return;
+
     ['A','B','C','D'].forEach(l => {
       const btn = document.getElementById('opt-btn-' + l);
       if (!btn) return;
@@ -352,9 +445,12 @@
       if (l === correctAnswer) btn.classList.add('correct');
       else if (l === myAnswer && l !== correctAnswer) btn.classList.add('wrong');
     });
+
     // Show result after delay
     setTimeout(() => {
       const correct = myAnswer === correctAnswer;
+      if (!correct) isEliminated = true; // For next round
+
       document.getElementById('result-icon').textContent = correct ? '🎉' : '😔';
       document.getElementById('result-title').textContent = correct ? 'Correct!' : 'Wrong!';
       document.getElementById('result-title').style.color = correct ? 'var(--correct)' : 'var(--wrong)';
@@ -371,7 +467,7 @@
         border-radius:10px;padding:12px 16px;margin-bottom:8px;">
         <span style="color:rgba(255,215,0,0.5);width:22px;font-size:0.8rem;">${i+1}</span>
         <span style="flex:1;font-weight:600;">${p.name}</span>
-        <span style="color:var(--gold);font-weight:700;">${p.score}</span>
+        <span style="color:var(--gold);font-weight:700;">${p.score_formatted || '₦0'}</span>
       </div>`).join('');
     document.getElementById('lb-content').innerHTML = html || '<div style="text-align:center;color:rgba(255,255,255,0.3);">No scores yet.</div>';
     showScreen('leaderboard');
@@ -381,10 +477,22 @@
     document.getElementById('hint-overlay').classList.remove('show');
   }
 
+  function useLifeline(ll) {
+    if (isEliminated) return;
+    socket.emit('student_use_lifeline', {lifeline: ll});
+  }
+
+  function submitVote(option) {
+      socket.emit('student_audience_vote', {option: option});
+      document.querySelectorAll('.vote-btn').forEach(b => {
+          b.classList.remove('voted');
+          if (b.textContent === option) b.classList.add('voted');
+      });
+  }
+
   function updateAudiencePoll(votes) {
     const total = Object.values(votes).reduce((a,b)=>a+b,0);
     const pollArea = document.getElementById('poll-area');
-    if (total === 0) return;
     pollArea.style.display = 'block';
     const bars = document.getElementById('poll-bars');
     bars.innerHTML = ['A','B','C','D'].map(l => {
@@ -409,14 +517,15 @@
   window.podium = {
     renderQuestion, showAnswerResult, showLeaderboard,
     updateAudiencePoll, apply5050, restoreAnswer,
-    showScreen,
+    showScreen, startTimer,
     setScore(s) { document.getElementById('header-score').textContent = s; },
     setPrize(p) { if(p) document.getElementById('prize-tag').textContent = p; },
     showHint(h) {
       document.getElementById('hint-display').textContent = h;
       document.getElementById('hint-overlay').classList.add('show');
     },
-    setLifelineUsed(ll) { document.getElementById('ll-'+ll)?.classList.add('used'); }
+    setLifelineUsed(ll) { document.getElementById('ll-'+ll)?.classList.add('used'); },
+    setEliminated(e) { isEliminated = e; }
   };
 </script>
 {% endblock %}

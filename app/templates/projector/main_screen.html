@@ -69,7 +69,7 @@
   .timer-circle-wrap svg { transform: rotate(-90deg); position: absolute; top:0; left:0; }
   .tc-bg { fill: none; stroke: rgba(255,255,255,0.1); stroke-width: 5; }
   .tc-fg { fill: none; stroke: var(--gold); stroke-width: 5; stroke-linecap: round;
-    stroke-dasharray: 195.0; stroke-dashoffset: 0; transition: stroke-dashoffset 1s linear, stroke 0.4s; }
+    stroke-dasharray: 195.0; stroke-dashoffset: 0; transition: stroke-dashoffset 0.1s linear, stroke 0.4s; }
   .timer-num-big {
     position: absolute; top:50%; left:50%; transform:translate(-50%,-50%);
     font-size: 1.4rem; font-weight: 900; color: var(--gold); font-variant-numeric: tabular-nums;
@@ -112,7 +112,7 @@
   .answer-dist.show { display: grid; }
   .dist-col { text-align: center; }
   .dist-bar-outer { height: 44px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 4px; }
-  .dist-bar-inner { width: 30px; border-radius: 4px 4px 0 0; transition: height 0.6s ease; min-height: 4px;
+  .dist-bar-inner { width: 30px; border-radius: 4px 4px 0 0; transition: height 1s cubic-bezier(0.175, 0.885, 0.32, 1.275); min-height: 4px;
     background: linear-gradient(to top, var(--gold-dark), var(--gold)); }
   .dist-letter { font-size: 0.78rem; font-weight: 700; color: var(--gold); }
   .dist-pct { font-size: 0.7rem; color: rgba(255,255,255,0.45); }
@@ -172,7 +172,7 @@
   @keyframes popIn { from{transform:translate(-50%,-50%) scale(0.82);opacity:0} to{transform:translate(-50%,-50%) scale(1);opacity:1} }
   .hint-text-big { font-size: 1.25rem; color: white; margin: 14px 0 6px; line-height: 1.5; }
   /* Leaderboard screen */
-  .lb-screen { overflow-y: auto; padding-bottom: 8px; }
+  .lb-screen { overflow-y: auto; padding: 20px; padding-bottom: 40px; }
   .lb-screen-title { font-family: var(--font-display); font-size: clamp(1.4rem,2.5vw,2rem);
     color: var(--gold); text-align: center; margin-bottom: 18px;
     text-shadow: 0 0 30px rgba(255,215,0,0.4); flex-shrink: 0; }
@@ -224,7 +224,7 @@
 
   /* Confetti */
   .confetti-piece {
-    position: fixed; width: 9px; height: 9px; z-index: 500;
+    position: fixed; width: 9px; height: 9px; z-index: 10;
     animation: confettiFall linear forwards; top: -20px; pointer-events: none;
   }
 @keyframes fadeIn { from{opacity:0} to{opacity:1} }
@@ -310,7 +310,7 @@
     <div class="prize-rung {% if loop.revindex0 in safe_havens %}safe-haven{% endif %}"
          id="rung-{{ loop.revindex - 1 }}">
       <span class="rung-n">{{ loop.revindex }}</span>
-      <span>{{ p }}</span>
+      <span>₦{{ "{:,}".format(p) }}</span>
     </div>
     {% endfor %}
   </div>
@@ -416,19 +416,19 @@ function startTimer(seconds) {
   const fg = document.getElementById('proj-tc-fg');
   const num = document.getElementById('proj-timer-num');
   function tick() {
-    num.textContent = rem;
+    num.textContent = Math.ceil(rem);
     const offset = TC_CIRC * (1 - rem / seconds);
     fg.style.strokeDashoffset = offset;
     fg.style.stroke = rem <= 5 ? 'var(--wrong)' : rem <= 10 ? '#FFA500' : 'var(--gold)';
     if (rem <= 0) clearInterval(timerInterval);
-    rem = Math.max(0, rem - 1);
+    rem = Math.max(0, rem - 0.1);
   }
   tick();
-  timerInterval = setInterval(tick, 1000);
+  timerInterval = setInterval(tick, 100);
 }
 
 // ── Render question ───────────────────────────────────────
-function renderQuestion(q) {
+function renderQuestion(q, timerStarted, timeOverride) {
   document.getElementById('results-overlay').classList.remove('show');
   showPhase('question');
   document.getElementById('answer-dist').classList.remove('show');
@@ -463,7 +463,13 @@ function renderQuestion(q) {
     </div>`;
   }).join('');
 
-  if (q.time_limit) startTimer(q.time_limit);
+  if (timerStarted) {
+      const timeToUse = (timeOverride !== undefined && timeOverride > 0) ? timeOverride : q.time_limit;
+      startTimer(timeToUse);
+  } else {
+      document.getElementById('proj-timer-num').textContent = q.time_limit;
+  }
+
   if (q.q_index !== undefined) updatePrizeLadder(q.q_index);
   if (window.MathJax) MathJax.typesetPromise([
     document.getElementById('proj-q-text'),
@@ -531,12 +537,12 @@ function revealAnswer(correct, stats, lb) {
 function renderLeaderboard(lb) {
   const medals = ['🥇','🥈','🥉'];
   const rankClass = ['gold','silver','bronze'];
-  document.getElementById('proj-lb-list').innerHTML = lb.slice(0,10).map((p,i) => `
+  document.getElementById('proj-lb-list').innerHTML = lb.slice(0,20).map((p,i) => `
     <div class="lb-row" style="animation-delay:${i*0.08}s">
       <span class="lb-rank ${rankClass[i]||''}">${medals[i] || (i+1)}</span>
       <span class="lb-name">${p.name}</span>
       <span class="lb-correct">${p.correct||0}/${p.answered||0} correct</span>
-      <span class="lb-score">${p.score}</span>
+      <span class="lb-score">${p.score_formatted || '₦0'}</span>
     </div>`).join('') || '<div style="text-align:center;color:rgba(255,255,255,0.3);padding:30px;">No scores yet.</div>';
   showPhase('leaderboard');
   launchConfetti();
@@ -636,13 +642,13 @@ window.proj = {
   renderQuestion, revealAnswer, renderLeaderboard,
   updateAudiencePoll, apply5050, showPhoneHint,
   addPlayer, removePlayer, playSound, showPhase,
-  updatePrizeLadder,
+  updatePrizeLadder, startTimer,
   applyStateSnapshot(data) {
     if (data.players) {
       data.players.filter(p=>p.active).forEach(p => addPlayer(p.sid, p.name));
     }
     if (data.phase === 'question' && data.current_question) {
-      renderQuestion(data.current_question);
+      renderQuestion(data.current_question, data.timer_started, data.time_remaining);
     } else if (data.phase === 'lobby') {
       showPhase('lobby');
     }

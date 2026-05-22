@@ -30,6 +30,10 @@ socket.on('new_question', (data) => {
   if (window.onNewQuestion) window.onNewQuestion(data);
 });
 
+socket.on('timer_started', (data) => {
+  if (window.onTimerStarted) window.onTimerStarted(data);
+});
+
 socket.on('answer_revealed', (data) => {
   if (window.onAnswerRevealed) window.onAnswerRevealed(data);
 });

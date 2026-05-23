@@ -110,6 +110,35 @@
   }
   .friend-icon { font-size: 3rem; margin-bottom: 20px; }
   .friend-title { font-family: var(--font-display); color: var(--gold); margin-bottom: 15px; }
+
+  .q-image, .friend-q-image {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    margin-bottom: 10px;
+  }
+  .opt-text {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 400;
+    margin-top: 5px;
+    opacity: 0.9;
+  }
+  .opt-image {
+    max-width: 80px;
+    max-height: 60px;
+    border-radius: 4px;
+    margin-top: 5px;
+  }
+  .vote-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 80px;
+  }
+
 </style>
 {% endblock %}
 
@@ -120,6 +149,7 @@
 
   <div id="poll-active" style="display: none;">
     <div class="poll-card">
+      <div id="q-img-wrap" style="margin-bottom: 20px;"></div>
       <div id="question-text" class="q-text">Loading question...</div>
       <div class="vote-grid" id="vote-grid">
         <button class="vote-btn" onclick="submitVote('A')">A</button>
@@ -149,6 +179,7 @@
     <h2 class="friend-title">YOU'VE BEEN CALLED!</h2>
     <p style="margin-bottom: 20px;"><span id="student-name-display" class="gold-text"></span> needs your help with this question:</p>
 
+    <div id="friend-q-img-wrap" style="margin-bottom: 15px;"></div>
     <div id="friend-q-text" class="q-text" style="font-size: 1.1rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px;"></div>
 
     <div class="vote-grid" style="margin-top: 20px;">
@@ -166,16 +197,15 @@
 <script src="/static/js/sockets/aud_sock.js"></script>
 <script>
   let votedOption = null;
+  let currentQuestion = null;
 
   function submitVote(option) {
     if (votedOption) return;
     votedOption = option;
 
-    // UI update
-    document.querySelectorAll('#vote-grid .vote-btn').forEach(btn => {
-      btn.disabled = true;
-      if (btn.textContent === option) btn.classList.add('voted');
-    });
+    if (currentQuestion) {
+        renderVoteGrid(currentQuestion);
+    }
 
     socket.emit('audience_vote', { option });
   }
@@ -206,27 +236,81 @@
     }).join('');
   }
 
+  function renderVoteGrid(q, isFriend=false) {
+    const opts = q.options || {};
+    const eliminated = q.eliminated_options || [];
+    const gridId = isFriend ? 'friend-overlay .vote-grid' : 'vote-grid';
+    const gridEl = isFriend ? document.querySelector('.friend-card .vote-grid') : document.getElementById('vote-grid');
+
+    if (!gridEl) return;
+
+    gridEl.innerHTML = ['A','B','C','D'].map(l => {
+      const opt = opts[l] || {};
+      const text = typeof opt === 'string' ? opt : (opt.text || '');
+      const img = typeof opt === 'object' ? opt.image : null;
+      const isElim = eliminated.includes(l);
+      const isVoted = votedOption === l;
+
+      const clickFn = isFriend ? `submitFriendAnswer('${l}')` : `submitVote('${l}')`;
+
+      return `<button class="vote-btn${isVoted ? ' voted' : ''}"
+        onclick="${clickFn}"
+        ${(isElim || (votedOption && !isFriend)) ? 'disabled' : ''}>
+        <strong>${l}</strong>
+        <span class="opt-text">${text}</span>
+        ${img ? `<img src="${img}" class="opt-image" alt="option ${l}">` : ''}
+      </button>`;
+    }).join('');
+  }
+
   function showPoll(active, question) {
     document.getElementById('poll-active').style.display = active ? 'block' : 'none';
     document.getElementById('poll-inactive').style.display = active ? 'none' : 'block';
 
     if (active && question) {
-      document.getElementById('question-text').textContent = question.question_text;
+      currentQuestion = question;
+      document.getElementById('question-text').innerHTML = question.question_text;
+
+      const imgWrap = document.getElementById('q-img-wrap');
+      imgWrap.innerHTML = question.question_image
+        ? `<img src="${question.question_image}" class="q-image" alt="question image">`
+        : '';
+
+      renderVoteGrid(question);
+
+      if (window.MathJax) {
+        MathJax.typesetPromise([
+          document.getElementById('question-text'),
+          document.getElementById('vote-grid')
+        ]);
+      }
     }
 
     if (!active) {
       votedOption = null;
-      document.querySelectorAll('#vote-grid .vote-btn').forEach(btn => {
-        btn.disabled = false;
-        btn.classList.remove('voted');
-      });
+      currentQuestion = null;
     }
   }
 
   function showFriendCall(question, name) {
       document.getElementById('student-name-display').textContent = name;
-      document.getElementById('friend-q-text').textContent = question.question_text;
+      document.getElementById('friend-q-text').innerHTML = question.question_text;
+
+      const imgWrap = document.getElementById('friend-q-img-wrap');
+      imgWrap.innerHTML = question.question_image
+        ? `<img src="${question.question_image}" class="friend-q-image" alt="friend question image">`
+        : '';
+
+      renderVoteGrid(question, true);
+
       document.getElementById('friend-overlay').style.display = 'flex';
+
+      if (window.MathJax) {
+        MathJax.typesetPromise([
+          document.getElementById('friend-q-text'),
+          document.querySelector('.friend-card .vote-grid')
+        ]);
+      }
   }
 
   function hideFriendCall() {

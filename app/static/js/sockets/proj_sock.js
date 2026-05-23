@@ -96,3 +96,19 @@ socket.on('phase_change', (data) => {
 socket.on('game_reset', () => {
   if (window.proj) window.proj.showPhase('lobby');
 });
+
+socket.on('all_players_kicked', () => {
+    if (window.proj) {
+        // Clear the internal player object
+        for (let sid in projPlayers) {
+            delete projPlayers[sid];
+        }
+        // Update the UI
+        document.getElementById('player-count').textContent = 0;
+        document.getElementById('footer-players').textContent = 0;
+        const names = document.getElementById('joining-names');
+        if (names) {
+            names.innerHTML = '<span style="color:rgba(255,255,255,0.2);font-style:italic;">Waiting for players to join...</span>';
+        }
+    }
+});

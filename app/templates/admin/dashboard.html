@@ -229,6 +229,7 @@
       <button class="btn btn-ghost" onclick="nextQuestion()" id="btn-next-q">Next Question ⏭</button>
     </div>
     <button class="btn btn-danger" onclick="if(confirm('Reset game?')) resetGame()" style="width:100%;margin-bottom:4px;">⚠ Reset Game</button>
+    <button class="btn btn-danger" onclick="if(confirm('Kick ALL players?')) kickAllPlayers()" style="width:100%;margin-bottom:4px;">🛑 Kick All Players</button>
 
     <div class="section-title">Timer</div>
     <div class="timer-display" id="admin-timer">--</div>
@@ -419,6 +420,10 @@
     socket.emit('admin_show_leaderboard');
     window.open('/screen/leaderboard', '_blank');
   }
+  function kickAllPlayers() {
+    socket.emit("admin_kick_all_players");
+  }
+
 
   function resetGame() {
     socket.emit('admin_reset_game');
@@ -625,6 +630,13 @@
     renderPlayers();
     document.getElementById('phase-badge').textContent = 'REVEAL';
     clearInterval(timerInterval);
+  };
+  window.onAllPlayersKicked = function() {
+    players = {};
+    answers = {};
+    renderPlayers();
+    updateAnswerBars({A:0,B:0,C:0,D:0});
+    toast("All players kicked!");
   };
   window.onStateSnapshot = function(data) {
     if (data.players) {

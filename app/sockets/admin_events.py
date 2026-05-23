@@ -114,3 +114,8 @@ def register_admin_events(socketio):
         sid = data.get('sid')
         game_state.remove_player(sid)
         socketio.emit('player_kicked', {'sid': sid})
+
+    @socketio.on('admin_kick_all_players')
+    def handle_kick_all():
+        game_state.kick_all_players()
+        socketio.emit('all_players_kicked', {})

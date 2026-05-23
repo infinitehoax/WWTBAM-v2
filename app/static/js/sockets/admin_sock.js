@@ -54,3 +54,7 @@ socket.on('admin_error', (data) => {
   console.error('[Admin Error]', data.msg);
   if (window.toast) window.toast(data.msg, true);
 });
+
+socket.on('all_players_kicked', () => {
+    if (window.onAllPlayersKicked) window.onAllPlayersKicked();
+});

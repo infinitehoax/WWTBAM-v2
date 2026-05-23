@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Import Questions{% endblock %}
+{% block extra_head %}
+<style>
+  body { background: #070B24; }
+  .page-wrap { max-width: 800px; margin: 0 auto; padding: 30px 20px; }
+  .page-header { display: flex; align-items: center; gap: 14px; margin-bottom: 26px; }
+  .page-title { font-family: var(--font-display); font-size: 1.3rem; color: var(--gold); }
+  .form-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 215, 0, 0.1); border-radius: 12px; padding: 24px; }
+  .help-text { color: rgba(255, 255, 255, 0.5); font-size: 0.85rem; margin-bottom: 20px; }
+  pre { background: rgba(0, 0, 0, 0.3); padding: 12px; border-radius: 6px; font-size: 0.75rem; color: #86EFAC; overflow-x: auto; }
+  textarea { width: 100%; min-height: 300px; background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: #fff; padding: 12px; font-family: 'Courier New', Courier, monospace; font-size: 0.9rem; resize: vertical; }
+  textarea:focus { border-color: var(--gold); outline: none; }
+</style>
+{% endblock %}
+{% block body %}
+<div class="page-wrap">
+  <div class="page-header">
+    <a href="{{ url_for('admin.questions') }}" class="btn btn-ghost" style="padding:7px 14px;font-size:0.8rem;">← Back</a>
+    <div class="page-title">Import Questions (JSON)</div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }}" style="margin-bottom: 20px; padding: 12px; border-radius: 8px; {% if category == 'success' %}background: rgba(34, 197, 94, 0.2); color: #86EFAC;{% else %}background: rgba(ef, 68, 68, 0.2); color: #fca5a5;{% endif %}">
+          {{ message }}
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <div class="form-card">
+    <p class="help-text">Paste your questions JSON array below. Duplicate questions (by text) will be skipped.</p>
+
+    <div style="margin-bottom: 20px;">
+      <label style="display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--gold); margin-bottom: 8px;">Expected Format Example:</label>
+<pre>
+[
+  {
+    "category": "General",
+    "difficulty": 1,
+    "question_text": "Example Question?",
+    "options": {"A": "Choice 1", "B": "Choice 2", "C": "Choice 3", "D": "Choice 4"},
+    "correct_answer": "A",
+    "time_limit": 30,
+    "prize_value": "₦1,000"
+  }
+]
+</pre>
+    </div>
+
+    <form method="POST">
+      <textarea name="json_data" placeholder="[ { ... }, { ... } ]" required></textarea>
+      <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
+        <button type="submit" class="btn btn-gold">Import Questions</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

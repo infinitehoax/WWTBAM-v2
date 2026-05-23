@@ -177,6 +177,39 @@
   .poll-bar-inner { height: 100%; background: linear-gradient(90deg, var(--gold-dark), var(--gold));
     border-radius: 6px; transition: width 0.5s ease; min-width: 4px; }
   .poll-pct { width: 36px; text-align: right; font-size: 0.8rem; color: var(--gold); font-weight: 700; }
+
+  /* Collapsible Poll Area */
+  .poll-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    background: rgba(255, 215, 0, 0.1);
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin-bottom: 5px;
+    transition: background 0.2s;
+  }
+  .poll-header:hover {
+    background: rgba(255, 215, 0, 0.2);
+  }
+  .poll-toggle-icon {
+    transition: transform 0.3s;
+    font-size: 0.8rem;
+  }
+  .poll-area-content {
+    max-height: 500px;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, opacity 0.3s;
+  }
+  .poll-area-content.collapsed {
+    max-height: 0;
+    opacity: 0;
+    margin-bottom: 0;
+  }
+  .poll-toggle-icon.collapsed {
+    transform: rotate(-90deg);
+  }
 </style>
 {% endblock %}
 {% block body %}
@@ -223,13 +256,23 @@
     </div>
     <!-- Audience poll display & Voting UI -->
     <div id="poll-area" style="display:none;padding:0 16px 10px;">
-      <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,215,0,0.5);margin-bottom:10px;">📊 Audience Voting</div>
-      <div style="text-align:center;margin-bottom:15px;background:rgba(255,215,0,0.1);padding:10px;border-radius:8px;border:1px dashed var(--gold);"><p style="font-size:0.85rem;margin-bottom:5px;">Tell the audience to visit:</p><code style="font-size:1.1rem;color:var(--gold);font-weight:bold;">/audience</code><br><a href="/audience" target="_blank" style="color:var(--gold);font-size:0.75rem;text-decoration:underline;">Open Audience View</a></div><div class="poll-wrap" id="poll-bars"></div>
-      <div class="vote-grid" id="vote-grid">
-        <button class="vote-btn" onclick="submitVote('A')">A</button>
-        <button class="vote-btn" onclick="submitVote('B')">B</button>
-        <button class="vote-btn" onclick="submitVote('C')">C</button>
-        <button class="vote-btn" onclick="submitVote('D')">D</button>
+      <div class="poll-header" onclick="togglePoll()">
+        <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,215,0,0.5);">📊 Audience Voting</div>
+        <span class="poll-toggle-icon" id="poll-toggle-icon">▼</span>
+      </div>
+      <div class="poll-area-content" id="poll-area-content">
+        <div style="text-align:center;margin-bottom:15px;background:rgba(255,215,0,0.1);padding:10px;border-radius:8px;border:1px dashed var(--gold);">
+          <p style="font-size:0.85rem;margin-bottom:5px;">Tell the audience to visit:</p>
+          <code style="font-size:1.1rem;color:var(--gold);font-weight:bold;">/audience</code><br>
+          <a href="/audience" target="_blank" style="color:var(--gold);font-size:0.75rem;text-decoration:underline;">Open Audience View</a>
+        </div>
+        <div class="poll-wrap" id="poll-bars"></div>
+        <div class="vote-grid" id="vote-grid">
+          <button class="vote-btn" onclick="submitVote('A')">A</button>
+          <button class="vote-btn" onclick="submitVote('B')">B</button>
+          <button class="vote-btn" onclick="submitVote('C')">C</button>
+          <button class="vote-btn" onclick="submitVote('D')">D</button>
+        </div>
       </div>
     </div>
   </div>
@@ -502,6 +545,14 @@
           b.classList.remove('voted');
           if (b.textContent === option) b.classList.add('voted');
       });
+  }
+
+
+  function togglePoll() {
+    const content = document.getElementById('poll-area-content');
+    const icon = document.getElementById('poll-toggle-icon');
+    content.classList.toggle('collapsed');
+    icon.classList.toggle('collapsed');
   }
 
   function updateAudiencePoll(votes) {

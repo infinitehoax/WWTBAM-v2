@@ -144,7 +144,7 @@
 <script>
   function updatePreview() {
     const text = document.getElementById('q-text').value;
-    document.getElementById('q-preview').textContent = text || 'Type your question above...';
+    document.getElementById('q-preview').innerHTML = text || 'Type your question above...';
     if (window.MathJax) MathJax.typesetPromise([document.getElementById('q-preview')]);
   }
   updatePreview();

@@ -94,6 +94,12 @@ class GameState:
         with self._lock:
             if sid in self.players:
                 self.players[sid]['active'] = False
+    def kick_all_players(self):
+        with self._lock:
+            self.players = {}
+            self.answers = {}
+            self.lifelines_used = {}
+
 
     def add_audience(self, sid):
         with self._lock:

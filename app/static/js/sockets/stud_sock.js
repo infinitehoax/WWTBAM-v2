@@ -130,3 +130,8 @@ socket.on('player_kicked', (data) => {
         window.location.href = '/student/join';
     }
 });
+
+socket.on('all_players_kicked', () => {
+    sessionStorage.clear();
+    window.location.href = '/student/join';
+});

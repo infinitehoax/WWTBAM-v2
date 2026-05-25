@@ -64,6 +64,10 @@
   <form method="POST" class="form-card">
     <div class="form-grid">
       <div class="form-group">
+        <label>Question Set</label>
+        <input type="text" name="set_name" value="{{ question.set_name if question else 'Default Set' }}" placeholder="e.g. Science Bowl 2024">
+      </div>
+      <div class="form-group">
         <label>Category</label>
         <input type="text" name="category" value="{{ question.category if question else '' }}" placeholder="e.g. Mathematics">
       </div>

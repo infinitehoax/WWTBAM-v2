@@ -31,7 +31,7 @@ def create_app():
     from flask import redirect, url_for
     @app.route('/')
     def index():
-        return redirect(url_for('student.join'))
+        return redirect(url_for('student.join'))  # This should now point to /play/
 
     # Create tables and seed
     with app.app_context():

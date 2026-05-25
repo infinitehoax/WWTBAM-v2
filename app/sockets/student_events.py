@@ -75,6 +75,8 @@ def register_student_events(socketio):
         success = game_state.record_answer(sid, answer)
         if success:
             emit('answer_locked', {'answer': answer})
+            # Play lock-in sound on projector
+            socketio.emit('play_sound', {'sound': 'lockin', 'loop': False})
             # Notify admin privately about the answer (spy view)
             player = game_state.players.get(sid, {})
             socketio.emit('admin_spy_update', {

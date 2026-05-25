@@ -40,18 +40,26 @@ def logout():
 @admin_bp.route('/dashboard')
 @require_admin
 def dashboard():
-    questions = Question.query.order_by(Question.difficulty).all()
+    questions = Question.query.filter_by(set_name=game_state.active_set).order_by(Question.difficulty).all()
     room_code = game_state.room_code or ''
+    set_names = [r[0] for r in db.session.query(Question.set_name).distinct().all()]
+    if not set_names: set_names = ['Default Set']
     return render_template('admin/dashboard.html',
                            questions=questions,
                            room_code=room_code,
-                           prize_ladder=game_state.prize_ladder)
+                           prize_ladder=game_state.prize_ladder,
+                           active_set=game_state.active_set,
+                           set_names=set_names)
 
 
 @admin_bp.route('/questions', methods=['GET'])
 @require_admin
 def questions():
-    qs = Question.query.order_by(Question.difficulty).all()
+    set_filter = request.args.get('set')
+    if set_filter:
+        qs = Question.query.filter_by(set_name=set_filter).order_by(Question.difficulty).all()
+    else:
+        qs = Question.query.order_by(Question.set_name, Question.difficulty).all()
     return render_template('admin/questions.html', questions=qs)
 
 
@@ -76,6 +84,7 @@ def new_question():
             correct_answer=request.form.get('correct_answer', 'A').upper(),
             time_limit=int(request.form.get('time_limit', 30)),
             prize_value=request.form.get('prize_value', '₦1,000'),
+            set_name=request.form.get('set_name', 'Default Set'),
         )
         db.session.add(q)
         db.session.commit()
@@ -125,6 +134,7 @@ def edit_question(q_id):
         q.correct_answer = request.form.get('correct_answer', q.correct_answer).upper()
         q.time_limit = int(request.form.get('time_limit', q.time_limit))
         q.prize_value = request.form.get('prize_value', q.prize_value)
+        q.set_name = request.form.get('set_name', q.set_name)
         db.session.commit()
         return redirect(url_for('admin.questions'))
     return render_template('admin/question_form.html', question=q, prize_ladder=game_state.prize_ladder)
@@ -164,6 +174,17 @@ def generate_room():
     code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
     game_state.room_code = code
     return jsonify({'code': code})
+
+
+@admin_bp.route('/switch-set', methods=['POST'])
+@require_admin
+def switch_set():
+    new_set = request.form.get('set_name')
+    if new_set:
+        game_state.active_set = new_set
+        game_state.reset()
+        return redirect(url_for('admin.dashboard'))
+    return "Invalid set", 400
 
 
 @admin_bp.route('/seed-questions')

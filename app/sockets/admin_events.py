@@ -62,10 +62,16 @@ def register_admin_events(socketio):
         # Leaderboard with formatted scores
         lb = game_state.get_leaderboard()
 
+        # Determine sound to play on projector
+        # If any active player was correct, play 'correct', otherwise 'wrong'
+        any_correct = any(p.get('is_correct_last') for p in lb if p.get('active'))
+        sound = 'correct' if any_correct else 'wrong'
+
         socketio.emit('answer_revealed', {
             'correct_answer': correct,
             'answer_stats': stats,
             'leaderboard': lb,
+            'sound': sound
         })
 
     @socketio.on('admin_show_leaderboard')

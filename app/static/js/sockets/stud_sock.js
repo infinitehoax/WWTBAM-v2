@@ -17,7 +17,7 @@ socket.on('join_success', (data) => {
 
 socket.on('join_error', (data) => {
     alert(data.msg);
-    window.location.href = '/student/join';
+    window.location.href = '/play';
 });
 
 socket.on('state_snapshot', (data) => {
@@ -127,11 +127,11 @@ socket.on('game_reset', () => {
 socket.on('player_kicked', (data) => {
     if (data.sid === socket.id) {
         sessionStorage.clear();
-        window.location.href = '/student/join';
+        window.location.href = '/play';
     }
 });
 
 socket.on('all_players_kicked', () => {
     sessionStorage.clear();
-    window.location.href = '/student/join';
+    window.location.href = '/play';
 });

@@ -28,6 +28,7 @@ def load_questions_from_list(questions_list, db, Question):
                 correct_answer=q['correct_answer'],
                 time_limit=q.get('time_limit', 30),
                 prize_value=q.get('prize_value', '₦1,000'),
+                set_name=q.get('set_name', 'Default Set'),
             )
             db.session.add(obj)
             count += 1
@@ -35,18 +36,9 @@ def load_questions_from_list(questions_list, db, Question):
     return count
 
 
-def load_questions_from_json(filepath, db, Question):
-    """Seed questions into DB from a JSON file."""
-    if not os.path.exists(filepath):
-        return 0
-    with open(filepath, 'r', encoding='utf-8') as f:
-        questions = json.load(f)
-    return load_questions_from_list(questions, db, Question)
-
-
-def get_question_order(db, Question, count=None):
+def get_question_order(db, Question, count=None, set_name='Default Set'):
     """Returns list of question IDs ordered by difficulty."""
-    qs = Question.query.order_by(Question.difficulty.asc()).all()
+    qs = Question.query.filter_by(set_name=set_name).order_by(Question.difficulty.asc()).all()
     if count:
         qs = qs[:count]
     return [q.id for q in qs]

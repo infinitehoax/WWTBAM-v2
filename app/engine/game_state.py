@@ -38,6 +38,7 @@ class GameState:
             ]
             self.current_prize_index = -1
             self.safe_havens = [4, 9]  # Indices 4 (₦10k) and 9 (₦50k)
+            self.active_set = 'Default Set'
 
     def add_player(self, sid, name, token=None):
         with self._lock:

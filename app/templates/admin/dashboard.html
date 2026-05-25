@@ -214,6 +214,19 @@
 <div class="layout">
   <!-- SIDEBAR -->
   <div class="sidebar">
+    <div class="section-title">Active Question Set</div>
+    <div class="room-code-box">
+      <div style="font-size: 1.2rem; font-weight: 700; color: var(--gold); margin-bottom: 10px;">{{ active_set }}</div>
+      <form method="POST" action="/admin/switch-set">
+        <select name="set_name" class="hint-input" style="margin-bottom: 10px; background: rgba(0,0,0,0.3);">
+          {% for name in set_names %}
+          <option value="{{ name }}" {% if name == active_set %}selected{% endif %}>{{ name }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-gold" style="width: 100%; padding: 6px;">Switch Set</button>
+      </form>
+    </div>
+
     <div class="section-title">Room Code</div>
     <div class="room-code-box">
       <div class="room-code" id="room-code-display">{{ room_code or '——' }}</div>

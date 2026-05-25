@@ -39,7 +39,7 @@
   <table class="q-table">
     <thead>
       <tr>
-        <th>#</th><th>Question</th><th>Category</th><th>Difficulty</th>
+        <th>#</th><th>Question</th><th>Set</th><th>Category</th><th>Difficulty</th>
         <th>Correct</th><th>Time</th><th>Prize</th><th>Actions</th>
       </tr>
     </thead>
@@ -52,7 +52,7 @@
           {% if q.use_latex %}<span class="latex-tag">LaTeX</span>{% endif %}
           {% if q.question_image %}<span class="latex-tag" style="background:rgba(34,197,94,0.2);color:#86EFAC;">🖼 Image</span>{% endif %}
         </td>
-        <td>{{ q.category }}</td>
+        <td>{{ q.set_name }}</td><td>{{ q.category }}</td>
         <td><span class="diff-badge">L{{ q.difficulty }}</span></td>
         <td class="correct-badge">{{ q.correct_answer }}</td>
         <td>{{ q.time_limit }}s</td>

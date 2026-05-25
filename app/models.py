@@ -22,6 +22,7 @@ class Question(db.Model):
     correct_answer = db.Column(db.String(1), nullable=False)  # 'A', 'B', 'C', or 'D'
     time_limit = db.Column(db.Integer, default=30)
     prize_value = db.Column(db.String(50), default='₦0')
+    set_name = db.Column(db.String(100), default='Default Set')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def to_dict(self, reveal_answer=False):
@@ -40,6 +41,7 @@ class Question(db.Model):
             },
             'time_limit': self.time_limit,
             'prize_value': self.prize_value,
+            'set_name': self.set_name,
         }
         if reveal_answer:
             d['correct_answer'] = self.correct_answer

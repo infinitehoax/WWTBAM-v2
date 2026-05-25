@@ -1,9 +1,9 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, session, jsonify, current_app, flash
 from ...extensions import db
 from ...models import Question, GameSession, Score
 from ...engine.game_state import game_state
-from ...engine.question_loader import load_questions_from_json, get_question_order
-import os, random, string
+from ...engine.question_loader import load_questions_from_json, load_questions_from_list, get_question_order
+import os, random, string, json
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -90,6 +90,27 @@ def new_question():
         db.session.commit()
         return redirect(url_for('admin.questions'))
     return render_template('admin/question_form.html', question=None, prize_ladder=game_state.prize_ladder)
+
+
+@admin_bp.route('/questions/import', methods=['GET', 'POST'])
+@require_admin
+def import_questions():
+    if request.method == 'POST':
+        json_data = request.form.get('json_data', '')
+        try:
+            data = json.loads(json_data)
+            if not isinstance(data, list):
+                flash('JSON must be a list of questions.', 'error')
+            else:
+                count = load_questions_from_list(data, db, Question)
+                flash(f'Successfully imported {count} new questions.', 'success')
+                return redirect(url_for('admin.questions'))
+        except json.JSONDecodeError:
+            flash('Invalid JSON format.', 'error')
+        except Exception as e:
+            flash(f'Error importing: {str(e)}', 'error')
+
+    return render_template('admin/import_questions.html')
 
 
 @admin_bp.route('/questions/<int:q_id>/edit', methods=['GET', 'POST'])
